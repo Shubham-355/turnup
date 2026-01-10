@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-  ArrowLeft, Edit, Trash2, Share2, Plus, Users, 
+  ArrowLeft, Edit, Trash2, Share2, Plus, Users, UserPlus,
   MessageCircle, Image as ImageIcon, DollarSign, Map,
   Calendar, Clock, MapPin, Settings as SettingsIcon
 } from 'lucide-react';
@@ -18,10 +18,12 @@ import ExpenseTracker from '../components/plan/ExpenseTracker';
 import MembersList from '../components/plan/MembersList';
 import PlanSettings from '../components/plan/PlanSettings';
 import MapView from '../components/plan/MapView';
+import JoinRequests from '../components/plan/JoinRequests';
 import { planService } from '../services/planService';
 import { activityService } from '../services/activityService';
 import { invitationService } from '../services/invitationService';
 import usePlanStore from '../stores/planStore';
+import useAuthStore from '../stores/authStore';
 import { formatDate } from '../utils/dateUtils';
 import { colors } from '../theme';
 
@@ -29,12 +31,17 @@ const PlanDetails = () => {
   const { planId } = useParams();
   const navigate = useNavigate();
   const { currentPlan, setCurrentPlan } = usePlanStore();
+  const { user } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('activities');
   const [showActivityForm, setShowActivityForm] = useState(false);
   const [editingActivity, setEditingActivity] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
   const [activities, setActivities] = useState([]);
+
+  // Check if current user is owner or admin
+  const isOwner = currentPlan?.ownerId === user?.id;
+  const isAdmin = currentPlan?.members?.some(m => m.userId === user?.id && m.role === 'ADMIN');
 
   useEffect(() => {
     fetchPlanDetails();
@@ -125,6 +132,10 @@ const PlanDetails = () => {
     { id: 'expenses', label: 'Expenses', icon: DollarSign },
     { id: 'members', label: 'Members', icon: Users, count: currentPlan._count?.members },
     { id: 'map', label: 'Map', icon: Map },
+    // Only show requests tab for owners/admins on public plans
+    ...(currentPlan.type === 'PUBLIC' && (isOwner || isAdmin) ? [
+      { id: 'requests', label: 'Requests', icon: UserPlus }
+    ] : []),
   ];
 
   return (
@@ -246,6 +257,9 @@ const PlanDetails = () => {
         {activeTab === 'expenses' && <ExpenseTracker planId={planId} />}
         {activeTab === 'members' && <MembersList planId={planId} plan={currentPlan} />}
         {activeTab === 'map' && <MapView activities={activities} />}
+        {activeTab === 'requests' && (
+          <JoinRequests planId={planId} isOwner={isOwner} isAdmin={isAdmin} />
+        )}
       </div>
 
       {/* Activity Form Modal */}

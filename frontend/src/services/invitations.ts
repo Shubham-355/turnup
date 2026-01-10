@@ -44,11 +44,10 @@ export const invitationService = {
   },
 
   respondToJoinRequest: async (
-    planId: string,
     requestId: string,
     approve: boolean
   ): Promise<ApiResponse<{ message: string }>> => {
-    const response = await api.put(`/plans/${planId}/join-requests/${requestId}`, { approve });
+    const response = await api.post(`/join-requests/${requestId}/respond`, { approve });
     return response.data;
   },
 

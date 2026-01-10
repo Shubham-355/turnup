@@ -13,6 +13,7 @@ import Dashboard from './pages/Dashboard';
 import CreatePlan from './pages/CreatePlan';
 import PlanDetails from './pages/PlanDetails';
 import JoinPlan from './pages/JoinPlan';
+import JoinByCode from './pages/JoinByCode';
 import Notifications from './pages/Notifications';
 import Settings from './pages/Settings';
 
@@ -59,6 +60,7 @@ function App() {
           isAuthenticated ? <Navigate to="/dashboard" replace /> : <Signup />
         } />
         <Route path="/join/:invitationCode" element={<JoinPlan />} />
+        <Route path="/join" element={<JoinByCode />} />
 
         {/* Protected Routes */}
         <Route path="/" element={

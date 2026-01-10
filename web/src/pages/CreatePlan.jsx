@@ -15,9 +15,8 @@ const CreatePlan = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    category: 'nightout',
-    type: 'private',
-    location: '',
+    category: 'NIGHTOUT',
+    type: 'PRIVATE',
     startDate: '',
   });
   const [loading, setLoading] = useState(false);
@@ -37,7 +36,22 @@ const CreatePlan = () => {
 
     setLoading(true);
     try {
-      const response = await planService.createPlan(formData);
+      // Clean up the data - remove empty strings and location (not in schema)
+      const cleanedData = {
+        name: formData.name.trim(),
+        category: formData.category,
+        type: formData.type,
+      };
+      
+      if (formData.description?.trim()) {
+        cleanedData.description = formData.description.trim();
+      }
+      
+      if (formData.startDate) {
+        cleanedData.startDate = formData.startDate;
+      }
+      
+      const response = await planService.createPlan(cleanedData);
       addPlan(response.data);
       toast.success('Plan created successfully!');
       navigate(`/plans/${response.data.id}`);

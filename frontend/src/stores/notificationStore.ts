@@ -16,6 +16,7 @@ interface NotificationState {
   markAsRead: (notificationId: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   addNotification: (notification: Notification) => void;
+  removeNotification: (notificationId: string) => void;
   clearError: () => void;
 }
 
@@ -90,6 +91,17 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       notifications: [notification, ...state.notifications],
       unreadCount: state.unreadCount + 1,
     }));
+  },
+
+  removeNotification: (notificationId: string) => {
+    set((state) => {
+      const notification = state.notifications.find(n => n.id === notificationId);
+      const wasUnread = notification && !notification.isRead;
+      return {
+        notifications: state.notifications.filter(n => n.id !== notificationId),
+        unreadCount: wasUnread ? Math.max(0, state.unreadCount - 1) : state.unreadCount,
+      };
+    });
   },
 
   clearError: () => set({ error: null }),

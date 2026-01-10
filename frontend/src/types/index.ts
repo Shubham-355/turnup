@@ -177,6 +177,7 @@ export interface JoinRequest {
 // Notification types
 export type NotificationType =
   | 'PLAN_INVITE'
+  | 'PLAN_INVITATION'
   | 'JOIN_REQUEST'
   | 'JOIN_APPROVED'
   | 'JOIN_REJECTED'

@@ -289,6 +289,29 @@ export default function PlanDetailScreen() {
             </View>
           </View>
 
+          {/* Join Requests Management - Only for owners/admins of public plans */}
+          {isPublicPlan && canManage && (
+            <TouchableOpacity
+              style={styles.joinRequestsCard}
+              onPress={() => router.push({
+                pathname: `/plans/${id}/join-requests`,
+                params: { planId: id, planName: currentPlan.name }
+              })}
+              activeOpacity={0.7}
+            >
+              <View style={styles.joinRequestsIcon}>
+                <Ionicons name="person-add" size={24} color={colors.secondary} />
+              </View>
+              <View style={styles.joinRequestsContent}>
+                <Text style={styles.joinRequestsTitle}>Manage Join Requests</Text>
+                <Text style={styles.joinRequestsSubtitle}>
+                  Review and approve requests to join this trip
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+          )}
+
           {/* Activities */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -624,5 +647,35 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textSecondary,
     textAlign: 'center',
+  },
+  joinRequestsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+    gap: spacing.md,
+  },
+  joinRequestsIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.lg,
+    backgroundColor: `${colors.secondary}20`,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  joinRequestsContent: {
+    flex: 1,
+  },
+  joinRequestsTitle: {
+    ...typography.body,
+    color: colors.text,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  joinRequestsSubtitle: {
+    ...typography.caption,
+    color: colors.textSecondary,
   },
 });
