@@ -17,6 +17,7 @@ import MediaGallery from '../components/plan/MediaGallery';
 import ExpenseTracker from '../components/plan/ExpenseTracker';
 import MembersList from '../components/plan/MembersList';
 import PlanSettings from '../components/plan/PlanSettings';
+import MapView from '../components/plan/MapView';
 import { planService } from '../services/planService';
 import { activityService } from '../services/activityService';
 import { invitationService } from '../services/invitationService';
@@ -240,13 +241,7 @@ const PlanDetails = () => {
         {activeTab === 'media' && <MediaGallery planId={planId} />}
         {activeTab === 'expenses' && <ExpenseTracker planId={planId} />}
         {activeTab === 'members' && <MembersList planId={planId} plan={currentPlan} />}
-        {activeTab === 'map' && (
-          <div className="bg-white rounded-xl p-8 text-center">
-            <Map className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Map View</h3>
-            <p className="text-gray-600">Track activity locations and member positions in real-time</p>
-          </div>
-        )}
+        {activeTab === 'map' && <MapView activities={activities} />}
       </div>
 
       {/* Activity Form Modal */}

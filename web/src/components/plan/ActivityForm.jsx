@@ -1,24 +1,59 @@
 import { useState } from 'react';
-import { MapPin, Clock } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
+import LocationSearch from '../ui/LocationSearch';
 
 const ActivityForm = ({ activity, onSubmit, onCancel }) => {
   const [formData, setFormData] = useState({
     name: activity?.name || '',
     description: activity?.description || '',
-    location: activity?.location || '',
-    dateTime: activity?.dateTime ? new Date(activity.dateTime).toISOString().slice(0, 16) : '',
+    locationName: activity?.locationName || '',
+    date: activity?.date ? new Date(activity.date).toISOString().split('T')[0] : '',
+    time: activity?.time || '',
   });
+
+  const [selectedLocation, setSelectedLocation] = useState(
+    activity?.locationName ? {
+      name: activity.locationName,
+      address: activity.locationAddress,
+      latitude: activity.latitude,
+      longitude: activity.longitude,
+      placeId: activity.placeId,
+    } : null
+  );
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleLocationChange = (location) => {
+    setSelectedLocation(location);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    
+    // Filter out empty optional fields
+    const submitData = {
+      name: formData.name,
+    };
+    
+    if (formData.description) submitData.description = formData.description;
+    if (formData.date) submitData.date = formData.date;
+    if (formData.time) submitData.time = formData.time;
+    
+    // Add location data if selected
+    if (selectedLocation) {
+      submitData.locationName = selectedLocation.name;
+      submitData.locationAddress = selectedLocation.address;
+      submitData.latitude = selectedLocation.latitude;
+      submitData.longitude = selectedLocation.longitude;
+      submitData.placeId = selectedLocation.placeId;
+    }
+    
+    onSubmit(submitData);
   };
 
   return (
@@ -46,20 +81,30 @@ const ActivityForm = ({ activity, onSubmit, onCancel }) => {
         />
       </div>
 
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Location
+        </label>
+        <LocationSearch
+          value={selectedLocation}
+          onChange={handleLocationChange}
+          placeholder="Search for a location..."
+        />
+      </div>
+
       <Input
-        label="Location (Optional)"
-        name="location"
-        value={formData.location}
+        label="Date (Optional)"
+        type="date"
+        name="date"
+        value={formData.date}
         onChange={handleChange}
-        placeholder="Search or enter location"
-        icon={MapPin}
       />
 
       <Input
-        label="Date & Time (Optional)"
-        type="datetime-local"
-        name="dateTime"
-        value={formData.dateTime}
+        label="Time (Optional)"
+        type="time"
+        name="time"
+        value={formData.time}
         onChange={handleChange}
         icon={Clock}
       />

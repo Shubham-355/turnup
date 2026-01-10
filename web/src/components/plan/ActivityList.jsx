@@ -1,7 +1,7 @@
 import { MapPin, Clock, Edit, Trash2 } from 'lucide-react';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
-import { formatDateTime } from '../../utils/dateUtils';
+import { formatDate } from '../../utils/dateUtils';
 
 const ActivityList = ({ activities, onEdit, onDelete }) => {
   if (activities.length === 0) {
@@ -25,16 +25,20 @@ const ActivityList = ({ activities, onEdit, onDelete }) => {
                 <p className="text-gray-600 mb-3">{activity.description}</p>
               )}
               <div className="space-y-2 text-sm text-gray-600">
-                {activity.location && (
+                {activity.locationName && (
                   <div className="flex items-center">
                     <MapPin className="w-4 h-4 mr-2 text-purple-600" />
-                    <span>{activity.location}</span>
+                    <span>{activity.locationName}</span>
                   </div>
                 )}
-                {activity.dateTime && (
+                {(activity.date || activity.time) && (
                   <div className="flex items-center">
                     <Clock className="w-4 h-4 mr-2 text-purple-600" />
-                    <span>{formatDateTime(activity.dateTime)}</span>
+                    <span>
+                      {activity.date && formatDate(activity.date)}
+                      {activity.date && activity.time && ' at '}
+                      {activity.time}
+                    </span>
                   </div>
                 )}
               </div>

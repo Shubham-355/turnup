@@ -12,6 +12,7 @@ const locationRoutes = require('./location.routes');
 const invitationRoutes = require('./invitation.routes');
 const notificationRoutes = require('./notification.routes');
 const joinRequestRoutes = require('./join-request.routes');
+const aiAgentRoutes = require('./ai-agent.routes');
 
 // Import controllers for nested routes
 const activityController = require('../controllers/activity.controller');
@@ -45,6 +46,7 @@ router.use('/maps', locationRoutes);
 router.use('/invitations', invitationRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/join-requests', joinRequestRoutes);
+router.use('/ai-agent', aiAgentRoutes);
 
 // Nested plan routes
 // Activities under plans
