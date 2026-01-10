@@ -51,7 +51,7 @@ export const planService = {
   },
 
   getPublicPlans: async (filters?: PlanFilters): Promise<ApiResponse<PaginatedResponse<Plan>>> => {
-    const response = await api.get('/plans/public', { params: filters });
+    const response = await api.get('/plans/discover', { params: filters });
     return response.data;
   },
 

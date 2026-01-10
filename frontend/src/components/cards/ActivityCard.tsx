@@ -38,7 +38,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
       activeOpacity={onPress ? 0.7 : 1}
       disabled={!onPress}
     >
-      {showOrder && (
+      {showOrder && activity.order != null && (
         <View style={styles.orderBadge}>
           <Text style={styles.orderText}>{activity.order}</Text>
         </View>
@@ -46,7 +46,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
       <View style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.name} numberOfLines={1}>
-            {activity.name}
+            {activity.name || 'Untitled Activity'}
           </Text>
           {onDelete && (
             <TouchableOpacity onPress={onDelete} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -79,22 +79,22 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
           )}
         </View>
 
-        {(activity._count?.expenses || activity._count?.media) && (
+        {(activity._count?.expenses || activity._count?.media) ? (
           <View style={styles.stats}>
-            {activity._count.expenses > 0 && (
+            {(activity._count?.expenses ?? 0) > 0 && (
               <View style={styles.statItem}>
                 <Ionicons name="receipt-outline" size={12} color={colors.textTertiary} />
                 <Text style={styles.statText}>{activity._count.expenses}</Text>
               </View>
             )}
-            {activity._count.media > 0 && (
+            {(activity._count?.media ?? 0) > 0 && (
               <View style={styles.statItem}>
                 <Ionicons name="images-outline" size={12} color={colors.textTertiary} />
                 <Text style={styles.statText}>{activity._count.media}</Text>
               </View>
             )}
           </View>
-        )}
+        ) : null}
       </View>
     </TouchableOpacity>
   );
