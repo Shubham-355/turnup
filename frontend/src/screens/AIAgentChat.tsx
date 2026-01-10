@@ -1,18 +1,30 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
+import api from '../services/api';
 
-const AIAgentChat = ({ navigation }) => {
-  const [messages, setMessages] = useState([]);
+interface AIAgentChatProps {
+  navigation?: any;
+  onClose?: () => void;
+}
+
+interface Message {
+  role: 'user' | 'model';
+  text: string;
+  routeData?: any;
+}
+
+const AIAgentChat = ({ navigation, onClose }: AIAgentChatProps) => {
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const scrollViewRef = useRef(null);
-  const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+  const [routeData, setRouteData] = useState<any>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     // Load conversation history
     loadHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -22,13 +34,10 @@ const AIAgentChat = ({ navigation }) => {
 
   const loadHistory = async () => {
     try {
-      const token = ''; // Get from your auth store/context
-      const response = await axios.get(`${API_URL}/ai-agent/history`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get('/ai-agent/history');
       
       const history = response.data.data;
-      const formattedMessages = history.map(item => ({
+      const formattedMessages = history.map((item: any) => ({
         role: item.role,
         text: item.parts[0].text
       }));
@@ -49,21 +58,37 @@ const AIAgentChat = ({ navigation }) => {
     setLoading(true);
 
     try {
-      const token = ''; // Get from your auth store/context
-      const response = await axios.post(
-        `${API_URL}/ai-agent/chat`,
-        { message: userMessage },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await api.post('/ai-agent/chat', { message: userMessage });
 
       const aiResponse = response.data.data.message;
-      setMessages(prev => [...prev, { role: 'model', text: aiResponse }]);
-    } catch (error) {
-      console.error('Failed to send message:', error);
+      const toolResults = response.data.data.toolResults || [];
+      
+      // Check if there's a directions result
+      const directionsResult = toolResults.find((r: any) => r.name === 'getDirections');
+      if (directionsResult && directionsResult.result.success) {
+        setRouteData(directionsResult.result);
+      }
+
       setMessages(prev => [...prev, { 
         role: 'model', 
-        text: 'Sorry, I encountered an error. Please try again.' 
+        text: aiResponse,
+        routeData: directionsResult?.result
       }]);
+    } catch (error: any) {
+      console.error('Failed to send message:', error);
+      
+      // Check for rate limit error
+      const isRateLimit = error.response?.status === 429 || 
+                          error.response?.data?.message?.includes('busy') ||
+                          error.response?.data?.message?.includes('429');
+      
+      setMessages(prev => [...prev, { 
+        role: 'model', 
+        text: isRateLimit 
+          ? '⏳ I\'m a bit busy right now. Please wait a few seconds and try again!'
+          : 'Sorry, I encountered an error. Please try again.' 
+      }]);
+      setRouteData(null);
     } finally {
       setLoading(false);
     }
@@ -71,17 +96,22 @@ const AIAgentChat = ({ navigation }) => {
 
   const resetConversation = async () => {
     try {
-      const token = ''; // Get from your auth store/context
-      await axios.post(`${API_URL}/ai-agent/reset`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.post('/ai-agent/reset', {});
       setMessages([]);
+      setRouteData(null);
     } catch (error) {
       console.error('Failed to reset conversation:', error);
     }
   };
 
-  const renderMessage = (message, index) => {
+  const openInMaps = () => {
+    if (routeData?.origin && routeData?.destination) {
+      const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(routeData.origin)}&destination=${encodeURIComponent(routeData.destination)}`;
+      Linking.openURL(url);
+    }
+  };
+
+  const renderMessage = (message: Message, index: number) => {
     const isUser = message.role === 'user';
     
     return (
@@ -112,11 +142,19 @@ const AIAgentChat = ({ navigation }) => {
   };
 
   const quickActions = [
-    { text: 'Create a trip', icon: 'airplane' },
-    { text: 'Plan a nightout', icon: 'moon' },
-    { text: 'Add activities', icon: 'list' },
-    { text: 'Split expenses', icon: 'cash' },
+    { text: 'Create trip to Starbucks and La Pinoz', icon: 'airplane' as const },
+    { text: 'Plan a nightout at Skybar', icon: 'moon' as const },
+    { text: 'Show my plans', icon: 'list' as const },
+    { text: 'Search for cafes nearby', icon: 'cafe' as const },
   ];
+
+  const handleClose = () => {
+    if (onClose) {
+      onClose();
+    } else if (navigation) {
+      navigation.goBack();
+    }
+  };
 
   return (
     <KeyboardAvoidingView 
@@ -126,15 +164,15 @@ const AIAgentChat = ({ navigation }) => {
     >
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#000" />
+        <TouchableOpacity onPress={handleClose}>
+          <Ionicons name={onClose ? "close" : "arrow-back"} size={24} color="#fff" />
         </TouchableOpacity>
         <View style={styles.headerTitle}>
-          <Ionicons name="sparkles" size={24} color="#7C3AED" />
+          <Ionicons name="sparkles" size={24} color="#fff" />
           <Text style={styles.headerText}>AI Assistant</Text>
         </View>
         <TouchableOpacity onPress={resetConversation}>
-          <Ionicons name="refresh" size={24} color="#000" />
+          <Ionicons name="refresh" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
 
@@ -158,9 +196,11 @@ const AIAgentChat = ({ navigation }) => {
                 <TouchableOpacity
                   key={index}
                   style={styles.quickAction}
-                  onPress={() => setInput(action.text)}
+                  onPress={() => {
+                    setInput(action.text);
+                  }}
                 >
-                  <Ionicons name={action.icon} size={20} color="#7C3AED" />
+                  <Ionicons name={action.icon} size={18} color="#7C3AED" />
                   <Text style={styles.quickActionText}>{action.text}</Text>
                 </TouchableOpacity>
               ))}
@@ -169,6 +209,30 @@ const AIAgentChat = ({ navigation }) => {
         )}
         
         {messages.map(renderMessage)}
+
+        {/* Route Info Card */}
+        {routeData && (
+          <View style={styles.routeCard}>
+            <View style={styles.routeHeader}>
+              <Ionicons name="map" size={20} color="#7C3AED" />
+              <Text style={styles.routeTitle}>Route Information</Text>
+            </View>
+            <View style={styles.routeInfo}>
+              <View style={styles.routeInfoItem}>
+                <Ionicons name="navigate" size={16} color="#6b7280" />
+                <Text style={styles.routeInfoText}>{routeData.distance}</Text>
+              </View>
+              <View style={styles.routeInfoItem}>
+                <Ionicons name="time" size={16} color="#6b7280" />
+                <Text style={styles.routeInfoText}>{routeData.duration}</Text>
+              </View>
+            </View>
+            <TouchableOpacity style={styles.openMapButton} onPress={openInMaps}>
+              <Ionicons name="open-outline" size={18} color="#fff" />
+              <Text style={styles.openMapButtonText}>Open in Maps</Text>
+            </TouchableOpacity>
+          </View>
+        )}
         
         {loading && (
           <View style={styles.loadingContainer}>
@@ -210,9 +274,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    paddingTop: Platform.OS === 'ios' ? 60 : 16,
+    backgroundColor: '#7C3AED',
   },
   headerTitle: {
     flexDirection: 'row',
@@ -222,6 +285,7 @@ const styles = StyleSheet.create({
   headerText: {
     fontSize: 18,
     fontWeight: '600',
+    color: '#fff',
   },
   messagesContainer: {
     flex: 1,
@@ -355,6 +419,56 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     backgroundColor: '#d1d5db',
+  },
+  routeCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    marginVertical: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  routeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  routeTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  routeInfo: {
+    flexDirection: 'row',
+    gap: 20,
+    marginBottom: 12,
+  },
+  routeInfoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  routeInfoText: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  openMapButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#7C3AED',
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  openMapButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

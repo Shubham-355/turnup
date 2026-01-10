@@ -35,9 +35,9 @@ export default function ActivityDetailScreen() {
     );
   }
 
-  const isOwner = activity.createdById === user?.id;
+  // Activity doesn't have createdById, so only plan owner can delete for now
   const isPlanOwner = currentPlan?.ownerId === user?.id;
-  const canDelete = isOwner || isPlanOwner;
+  const canDelete = isPlanOwner;
 
   const handleDelete = () => {
     Alert.alert(
@@ -161,7 +161,7 @@ export default function ActivityDetailScreen() {
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoText}>
-                Added by {activity.createdBy.displayName || activity.createdBy.username}
+                Added by {activity.createdBy?.displayName || activity.createdBy?.username || 'AI Assistant'}
               </Text>
               <Text style={styles.infoSubtext}>
                 {new Date(activity.createdAt).toLocaleDateString()}

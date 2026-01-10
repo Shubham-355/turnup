@@ -6,6 +6,7 @@ import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import useAuthStore from '../stores/authStore';
 import { authService } from '../services/authService';
+import { colors } from '../theme';
 
 const Settings = () => {
   const { user, updateUser } = useAuthStore();
@@ -37,15 +38,15 @@ const Settings = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">Settings</h1>
+    <div className="max-w-3xl mx-auto p-6" style={{ backgroundColor: colors.background }}>
+      <h1 className="text-3xl font-bold mb-8" style={{ color: colors.text }}>Settings</h1>
 
-      <Card className="p-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Profile Settings</h2>
+      <Card className="p-8" style={{ backgroundColor: colors.surface }}>
+        <h2 className="text-2xl font-bold mb-6" style={{ color: colors.text }}>Profile Settings</h2>
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="flex justify-center mb-6">
-            <div className="w-24 h-24 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center text-white font-bold text-3xl">
+            <div className="w-24 h-24 rounded-full flex items-center justify-center font-bold text-3xl" style={{ backgroundColor: colors.primary, color: colors.white }}>
               {user?.name?.charAt(0).toUpperCase()}
             </div>
           </div>
@@ -84,15 +85,15 @@ const Settings = () => {
           </Button>
         </form>
 
-        <div className="mt-8 pt-8 border-t border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Preferences</h3>
+        <div className="mt-8 pt-8 border-t" style={{ borderColor: colors.border }}>
+          <h3 className="text-lg font-semibold mb-4" style={{ color: colors.text }}>Preferences</h3>
           <div className="space-y-4">
             <label className="flex items-center justify-between">
-              <span className="text-gray-700">Email notifications</span>
+              <span style={{ color: colors.textSecondary }}>Email notifications</span>
               <input type="checkbox" className="toggle" defaultChecked />
             </label>
             <label className="flex items-center justify-between">
-              <span className="text-gray-700">Push notifications</span>
+              <span style={{ color: colors.textSecondary }}>Push notifications</span>
               <input type="checkbox" className="toggle" defaultChecked />
             </label>
           </div>

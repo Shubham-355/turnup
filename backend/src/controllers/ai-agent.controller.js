@@ -14,7 +14,7 @@ const chat = asyncHandler(async (req, res) => {
     return ApiResponse.error('Message is required', 400).send(res);
   }
 
-  const userId = req.user?.id || 'demo-user';
+  const userId = req.user.id;
   const response = await aiAgentService.chat(userId, message, context);
 
   ApiResponse.success(response, 'AI agent response').send(res);
@@ -26,7 +26,7 @@ const chat = asyncHandler(async (req, res) => {
  * @access  Private
  */
 const getHistory = asyncHandler(async (req, res) => {
-  const userId = req.user?.id || 'demo-user';
+  const userId = req.user.id;
   const history = await aiAgentService.getHistory(userId);
 
   ApiResponse.success(history).send(res);
@@ -38,7 +38,7 @@ const getHistory = asyncHandler(async (req, res) => {
  * @access  Private
  */
 const resetConversation = asyncHandler(async (req, res) => {
-  const userId = req.user?.id || 'demo-user';
+  const userId = req.user.id;
   const result = await aiAgentService.resetConversation(userId);
 
   ApiResponse.success(result).send(res);

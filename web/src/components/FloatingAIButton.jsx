@@ -17,25 +17,21 @@ const FloatingAIButton = () => {
   return (
     <>
       {/* Floating Button */}
-      <button
-        className="floating-ai-button"
-        onClick={() => setIsOpen(true)}
-        title="AI Assistant"
-      >
-        ✨
-      </button>
+      {!isOpen && (
+        <button
+          className="floating-ai-button"
+          onClick={() => setIsOpen(true)}
+          title="AI Assistant"
+        >
+          ✨
+        </button>
+      )}
 
       {/* AI Chat Overlay */}
       {isOpen && (
         <div className="ai-chat-overlay">
           <div className="ai-chat-modal">
-            <button
-              className="close-button"
-              onClick={() => setIsOpen(false)}
-            >
-              ×
-            </button>
-            <AIAgentChat />
+            <AIAgentChat onClose={() => setIsOpen(false)} />
           </div>
         </div>
       )}

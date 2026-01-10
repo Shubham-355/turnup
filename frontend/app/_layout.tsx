@@ -8,6 +8,7 @@ import 'react-native-reanimated';
 
 import { useAuthStore } from '../src/stores';
 import { LoadingSpinner } from '../src/components/ui/LoadingSpinner';
+import FloatingAIButton from '../src/components/FloatingAIButton';
 
 // Custom light theme matching our app colors
 const CustomLightTheme = {
@@ -74,6 +75,8 @@ export default function RootLayout() {
             <Stack.Screen name="notifications" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="join" options={{ presentation: 'modal' }} />
           </Stack>
+          {/* AI Assistant Floating Button - available across all screens */}
+          {isAuthenticated && <FloatingAIButton />}
           <StatusBar style="dark" />
         </ThemeProvider>
       </SafeAreaProvider>

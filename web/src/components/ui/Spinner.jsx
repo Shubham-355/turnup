@@ -1,3 +1,5 @@
+import { colors } from '../../theme';
+
 const Spinner = ({ size = 'md', className = '' }) => {
   const sizes = {
     sm: 'w-4 h-4',
@@ -7,7 +9,13 @@ const Spinner = ({ size = 'md', className = '' }) => {
 
   return (
     <div className={`${sizes[size]} ${className}`}>
-      <div className="animate-spin rounded-full border-4 border-gray-200 border-t-purple-600 h-full w-full" />
+      <div 
+        className="animate-spin rounded-full border-4 h-full w-full" 
+        style={{
+          borderColor: colors.surfaceLight,
+          borderTopColor: colors.primary,
+        }}
+      />
     </div>
   );
 };

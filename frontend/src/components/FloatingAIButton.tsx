@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, TouchableOpacity, StyleSheet, Modal } from 'react-native';
+import { TouchableOpacity, StyleSheet, Modal, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AIAgentChat from '../screens/AIAgentChat';
 
@@ -30,10 +30,12 @@ const FloatingAIButton = () => {
       <Modal
         visible={isVisible}
         animationType="slide"
-        presentationStyle="pageSheet"
+        presentationStyle="fullScreen"
         onRequestClose={() => setIsVisible(false)}
       >
-        <AIAgentChat onClose={() => setIsVisible(false)} />
+        <SafeAreaView style={styles.modalContainer}>
+          <AIAgentChat onClose={() => setIsVisible(false)} />
+        </SafeAreaView>
       </Modal>
     </>
   );
@@ -42,8 +44,8 @@ const FloatingAIButton = () => {
 const styles = StyleSheet.create({
   floatingButton: {
     position: 'absolute',
-    bottom: 24,
-    right: 24,
+    bottom: 100,
+    right: 20,
     width: 60,
     height: 60,
     borderRadius: 30,
@@ -59,6 +61,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4.65,
     zIndex: 1000,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
   },
 });
 

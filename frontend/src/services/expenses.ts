@@ -57,8 +57,15 @@ export const expenseService = {
     return response.data;
   },
 
-  settleShare: async (planId: string, shareId: string): Promise<ApiResponse<{ id: string }>> => {
-    const response = await api.put(`/plans/${planId}/expenses/shares/${shareId}/settle`);
+  // Settle a user's share of an expense
+  settleShare: async (expenseId: string, userId: string): Promise<ApiResponse<{ id: string }>> => {
+    const response = await api.post(`/expenses/${expenseId}/settle/${userId}`);
+    return response.data;
+  },
+
+  // Get user's debts for a plan
+  getUserDebts: async (planId: string): Promise<ApiResponse<unknown>> => {
+    const response = await api.get(`/plans/${planId}/expenses/debts`);
     return response.data;
   },
 };

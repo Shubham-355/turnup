@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, MapPin, X, Loader } from 'lucide-react';
 import Input from './Input';
+import { colors, borderRadius, shadows } from '../../theme';
 
 const LocationSearch = ({ value, onChange, placeholder = "Search location..." }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -126,7 +127,7 @@ const LocationSearch = ({ value, onChange, placeholder = "Search location..." })
         
         {isSearching && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <Loader className="w-4 h-4 animate-spin text-purple-600" />
+            <Loader className="w-4 h-4 animate-spin" style={{ color: colors.primary }} />
           </div>
         )}
         
@@ -134,7 +135,8 @@ const LocationSearch = ({ value, onChange, placeholder = "Search location..." })
           <button
             type="button"
             onClick={handleClear}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            className="absolute right-3 top-1/2 -translate-y-1/2 hover:opacity-70"
+            style={{ color: colors.textTertiary }}
           >
             <X className="w-4 h-4" />
           </button>
@@ -143,22 +145,40 @@ const LocationSearch = ({ value, onChange, placeholder = "Search location..." })
 
       {/* Results Dropdown */}
       {showResults && results.length > 0 && (
-        <div className="absolute z-50 w-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200 max-h-80 overflow-y-auto">
+        <div 
+          className="absolute z-50 w-full mt-2 max-h-80 overflow-y-auto"
+          style={{
+            backgroundColor: colors.background,
+            borderRadius: borderRadius.lg,
+            boxShadow: shadows.lg,
+            border: `1px solid ${colors.border}`,
+          }}
+        >
           {results.map((place) => (
             <button
               key={place.placeId}
               type="button"
               onClick={() => handleSelectPlace(place)}
-              className="w-full px-4 py-3 text-left hover:bg-purple-50 border-b border-gray-100 last:border-b-0 transition-colors"
+              className="w-full px-4 py-3 text-left border-b last:border-b-0 transition-colors hover:opacity-90"
+              style={{ 
+                borderColor: colors.divider,
+                backgroundColor: 'transparent',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = colors.surfaceLight;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
             >
               <div className="flex items-start">
-                <MapPin className="w-4 h-4 text-purple-600 mr-3 mt-1 flex-shrink-0" />
+                <MapPin className="w-4 h-4 mr-3 mt-1 flex-shrink-0" style={{ color: colors.primary }} />
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-gray-900 truncate">
+                  <div className="font-medium truncate" style={{ color: colors.text }}>
                     {place.name}
                   </div>
                   {place.address && (
-                    <div className="text-sm text-gray-500 truncate">
+                    <div className="text-sm truncate" style={{ color: colors.textSecondary }}>
                       {place.address}
                     </div>
                   )}
@@ -171,7 +191,16 @@ const LocationSearch = ({ value, onChange, placeholder = "Search location..." })
 
       {/* No results message */}
       {showResults && searchQuery.length >= 3 && results.length === 0 && !isSearching && (
-        <div className="absolute z-50 w-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200 p-4 text-center text-gray-500">
+        <div 
+          className="absolute z-50 w-full mt-2 p-4 text-center"
+          style={{
+            backgroundColor: colors.background,
+            borderRadius: borderRadius.lg,
+            boxShadow: shadows.lg,
+            border: `1px solid ${colors.border}`,
+            color: colors.textSecondary,
+          }}
+        >
           No locations found. Try a different search term.
         </div>
       )}

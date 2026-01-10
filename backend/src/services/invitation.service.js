@@ -510,6 +510,35 @@ class InvitationService {
 
     return { message: 'Request rejected' };
   }
+
+  /**
+   * Search users to invite
+   */
+  async searchUsers(query, currentUserId, limit = 10) {
+    if (!query || query.length < 2) {
+      return [];
+    }
+
+    const users = await prisma.user.findMany({
+      where: {
+        id: { not: currentUserId },
+        OR: [
+          { username: { contains: query, mode: 'insensitive' } },
+          { displayName: { contains: query, mode: 'insensitive' } },
+          { email: { contains: query, mode: 'insensitive' } },
+        ],
+      },
+      select: {
+        id: true,
+        username: true,
+        displayName: true,
+        avatar: true,
+      },
+      take: limit,
+    });
+
+    return users;
+  }
 }
 
 module.exports = new InvitationService();

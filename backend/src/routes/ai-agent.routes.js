@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const aiAgentController = require('../controllers/ai-agent.controller');
-// const { authenticate } = require('../middlewares/auth.middleware');
+const { authenticate } = require('../middlewares/auth.middleware');
 
-// All routes are public for demo purposes
-// router.use(authenticate);
+// All routes require authentication
+router.use(authenticate);
 
 /**
  * @route   POST /api/ai-agent/chat

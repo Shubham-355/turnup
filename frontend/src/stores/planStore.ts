@@ -22,6 +22,7 @@ interface PlanState {
   fetchPlans: (filters?: PlanFilters) => Promise<void>;
   fetchPublicPlans: (filters?: PlanFilters) => Promise<void>;
   fetchPlanById: (planId: string) => Promise<void>;
+  fetchPlanDetails: (planId: string) => Promise<void>;
   createPlan: (data: CreatePlanData) => Promise<Plan>;
   updatePlan: (planId: string, data: Partial<CreatePlanData>) => Promise<void>;
   deletePlan: (planId: string) => Promise<void>;
@@ -99,6 +100,25 @@ export const usePlanStore = create<PlanState>((set, get) => ({
       set({ currentPlan: response.data, isLoading: false });
     } catch (error: any) {
       set({ error: error.response?.data?.message || 'Failed to fetch plan', isLoading: false });
+    }
+  },
+
+  fetchPlanDetails: async (planId: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const [planRes, activitiesRes, membersRes] = await Promise.all([
+        planService.getPlanById(planId),
+        planService.getActivities(planId),
+        planService.getMembers(planId),
+      ]);
+      set({
+        currentPlan: planRes.data,
+        activities: activitiesRes.data,
+        members: membersRes.data,
+        isLoading: false,
+      });
+    } catch (error: any) {
+      set({ error: error.response?.data?.message || 'Failed to fetch plan details', isLoading: false });
     }
   },
 

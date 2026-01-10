@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, MapPin, Globe, Lock, ArrowLeft } from 'lucide-react';
+import { Calendar, MapPin, Globe, Lock, ArrowLeft, Moon, Plane } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { planService } from '../services/planService';
 import usePlanStore from '../stores/planStore';
+import { colors } from '../theme';
 
 const CreatePlan = () => {
   const navigate = useNavigate();
@@ -48,11 +49,12 @@ const CreatePlan = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-3xl mx-auto p-6" style={{ backgroundColor: colors.background }}>
       {/* Back Button */}
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center text-gray-600 hover:text-gray-900 mb-6"
+        className="flex items-center hover:opacity-80 mb-6"
+        style={{ color: colors.textSecondary }}
       >
         <ArrowLeft className="w-5 h-5 mr-2" />
         Back
@@ -60,11 +62,11 @@ const CreatePlan = () => {
 
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Create New Plan</h1>
-        <p className="text-gray-600">Set up your event and start inviting friends</p>
+        <h1 className="text-3xl font-bold mb-2" style={{ color: colors.text }}>Create New Plan</h1>
+        <p style={{ color: colors.textSecondary }}>Set up your event and start inviting friends</p>
       </div>
 
-      <Card className="p-8">
+      <Card className="p-8" style={{ backgroundColor: colors.surface }}>
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Plan Name */}
           <Input
@@ -87,76 +89,81 @@ const CreatePlan = () => {
               onChange={handleChange}
               placeholder="Tell people what this plan is about..."
               rows="4"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 transition-all"
+              style={{ 
+                borderColor: colors.border,
+                backgroundColor: colors.background,
+                color: colors.text
+              }}
             />
           </div>
 
           {/* Category */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Category <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium mb-3" style={{ color: colors.text }}>
+              Category <span style={{ color: colors.error }}>*</span>
             </label>
             <div className="grid grid-cols-2 gap-4">
               <button
                 type="button"
-                onClick={() => setFormData(prev => ({ ...prev, category: 'nightout' }))}
-                className={`p-4 rounded-lg border-2 transition-all ${
-                  formData.category === 'nightout'
-                    ? 'border-purple-600 bg-purple-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
+                onClick={() => setFormData(prev => ({ ...prev, category: 'NIGHTOUT' }))}
+                className="p-4 rounded-xl border-2 transition-all"
+                style={{
+                  borderColor: formData.category === 'NIGHTOUT' ? colors.nightout : colors.border,
+                  backgroundColor: formData.category === 'NIGHTOUT' ? `${colors.nightout}10` : 'transparent'
+                }}
               >
-                <Calendar className="w-8 h-8 mx-auto mb-2 text-purple-600" />
-                <div className="font-semibold text-gray-900">Night Out</div>
-                <div className="text-sm text-gray-600">Evening activities</div>
+                <Moon className="w-8 h-8 mx-auto mb-2" style={{ color: colors.nightout }} />
+                <div className="font-semibold" style={{ color: colors.text }}>Night Out</div>
+                <div className="text-sm" style={{ color: colors.textSecondary }}>Evening activities</div>
               </button>
               <button
                 type="button"
-                onClick={() => setFormData(prev => ({ ...prev, category: 'trip' }))}
-                className={`p-4 rounded-lg border-2 transition-all ${
-                  formData.category === 'trip'
-                    ? 'border-purple-600 bg-purple-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
+                onClick={() => setFormData(prev => ({ ...prev, category: 'TRIP' }))}
+                className="p-4 rounded-xl border-2 transition-all"
+                style={{
+                  borderColor: formData.category === 'TRIP' ? colors.trip : colors.border,
+                  backgroundColor: formData.category === 'TRIP' ? `${colors.trip}10` : 'transparent'
+                }}
               >
-                <MapPin className="w-8 h-8 mx-auto mb-2 text-blue-600" />
-                <div className="font-semibold text-gray-900">Trip</div>
-                <div className="text-sm text-gray-600">Multi-day adventure</div>
+                <Plane className="w-8 h-8 mx-auto mb-2" style={{ color: colors.trip }} />
+                <div className="font-semibold" style={{ color: colors.text }}>Trip</div>
+                <div className="text-sm" style={{ color: colors.textSecondary }}>Multi-day adventure</div>
               </button>
             </div>
           </div>
 
           {/* Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Privacy <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium mb-3" style={{ color: colors.text }}>
+              Privacy <span style={{ color: colors.error }}>*</span>
             </label>
             <div className="grid grid-cols-2 gap-4">
               <button
                 type="button"
-                onClick={() => setFormData(prev => ({ ...prev, type: 'private' }))}
-                className={`p-4 rounded-lg border-2 transition-all ${
-                  formData.type === 'private'
-                    ? 'border-purple-600 bg-purple-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
+                onClick={() => setFormData(prev => ({ ...prev, type: 'PRIVATE' }))}
+                className="p-4 rounded-xl border-2 transition-all"
+                style={{
+                  borderColor: formData.type === 'PRIVATE' ? colors.primary : colors.border,
+                  backgroundColor: formData.type === 'PRIVATE' ? `${colors.primary}10` : 'transparent'
+                }}
               >
-                <Lock className="w-8 h-8 mx-auto mb-2 text-purple-600" />
-                <div className="font-semibold text-gray-900">Private</div>
-                <div className="text-sm text-gray-600">Invite only</div>
+                <Lock className="w-8 h-8 mx-auto mb-2" style={{ color: colors.primary }} />
+                <div className="font-semibold" style={{ color: colors.text }}>Private</div>
+                <div className="text-sm" style={{ color: colors.textSecondary }}>Invite only</div>
               </button>
               <button
                 type="button"
-                onClick={() => setFormData(prev => ({ ...prev, type: 'public' }))}
-                className={`p-4 rounded-lg border-2 transition-all ${
-                  formData.type === 'public'
-                    ? 'border-purple-600 bg-purple-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
+                onClick={() => setFormData(prev => ({ ...prev, type: 'PUBLIC' }))}
+                className="p-4 rounded-xl border-2 transition-all"
+                style={{
+                  borderColor: formData.type === 'PUBLIC' ? colors.accent : colors.border,
+                  backgroundColor: formData.type === 'PUBLIC' ? `${colors.accent}10` : 'transparent'
+                }}
               >
-                <Globe className="w-8 h-8 mx-auto mb-2 text-green-600" />
-                <div className="font-semibold text-gray-900">Public</div>
-                <div className="text-sm text-gray-600">Anyone can join</div>
+                <Globe className="w-8 h-8 mx-auto mb-2" style={{ color: colors.accent }} />
+                <div className="font-semibold" style={{ color: colors.text }}>Public</div>
+                <div className="text-sm" style={{ color: colors.textSecondary }}>Anyone can join</div>
               </button>
             </div>
           </div>

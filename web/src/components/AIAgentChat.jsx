@@ -3,7 +3,7 @@ import axios from 'axios';
 import GoogleMapRoute from './GoogleMapRoute';
 import './AIAgentChat.css';
 
-const AIAgentChat = () => {
+const AIAgentChat = ({ onClose }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -76,9 +76,17 @@ const AIAgentChat = () => {
       }]);
     } catch (error) {
       console.error('Failed to send message:', error);
+      
+      // Check for rate limit error
+      const isRateLimit = error.response?.status === 429 || 
+                          error.response?.data?.message?.includes('busy') ||
+                          error.response?.data?.message?.includes('429');
+      
       setMessages(prev => [...prev, { 
         role: 'model', 
-        text: 'Sorry, I encountered an error. Please try again.' 
+        text: isRateLimit 
+          ? '⏳ I\'m a bit busy right now. Please wait a few seconds and try again!'
+          : 'Sorry, I encountered an error. Please try again.' 
       }]);
       setRouteData(null);
     } finally {
@@ -100,10 +108,10 @@ const AIAgentChat = () => {
   };
 
   const quickActions = [
-    { text: 'Create a trip', icon: '✈️' },
-    { text: 'Plan a nightout', icon: '🌙' },
-    { text: 'Add activities', icon: '📝' },
-    { text: 'Split expenses', icon: '💰' },
+    { text: 'Create trip to Starbucks and La Pinoz', icon: '✈️' },
+    { text: 'Plan a nightout at Skybar', icon: '🌙' },
+    { text: 'Show my plans', icon: '📋' },
+    { text: 'Search for cafes nearby', icon: '☕' },
   ];
 
   return (
@@ -114,9 +122,16 @@ const AIAgentChat = () => {
           <span className="sparkle-icon">✨</span>
           <h2>AI Assistant</h2>
         </div>
-        <button className="reset-button" onClick={resetConversation}>
-          🔄 Reset
-        </button>
+        <div className="header-actions">
+          <button className="reset-button" onClick={resetConversation}>
+            🔄
+          </button>
+          {onClose && (
+            <button className="close-button" onClick={onClose}>
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Messages */}

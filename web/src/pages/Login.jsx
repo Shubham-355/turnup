@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, LogIn } from 'lucide-react';
+import { Mail, Lock, Flame } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
@@ -8,6 +8,7 @@ import { authService } from '../services/authService';
 import useAuthStore from '../stores/authStore';
 import { initSocket } from '../config/socket';
 import { validateEmail, validatePassword } from '../utils/validation';
+import { colors } from '../theme';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -63,29 +64,34 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-500 via-pink-500 to-red-500 px-4">
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: colors.background }}>
       <div className="max-w-md w-full">
-        {/* Logo/Brand */}
-        <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold text-white mb-2">TurnUp</h1>
-          <p className="text-white/90 text-lg">Plan together, party better</p>
+        {/* Logo/Header */}
+        <div className="text-center mb-12 mt-12">
+          <div 
+            className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6"
+            style={{ backgroundColor: colors.surface }}
+          >
+            <Flame size={48} style={{ color: colors.primary }} />
+          </div>
+          <h1 className="text-4xl font-bold mb-2" style={{ color: colors.text }}>
+            Welcome Back
+          </h1>
+          <p className="text-base" style={{ color: colors.textSecondary }}>
+            Sign in to continue planning
+          </p>
         </div>
 
-        {/* Login Card */}
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome back</h2>
-            <p className="text-gray-600">Sign in to continue planning</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Login Form */}
+        <div className="space-y-6 mb-8">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <Input
               label="Email"
               type="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
-              placeholder="you@example.com"
+              placeholder="Enter your email"
               icon={Mail}
               error={errors.email}
               required
@@ -97,17 +103,27 @@ const Login = () => {
               name="password"
               value={formData.password}
               onChange={handleChange}
-              placeholder="••••••••"
+              placeholder="Enter your password"
               icon={Lock}
               error={errors.password}
               required
             />
 
+            <div className="text-right">
+              <button 
+                type="button"
+                className="text-sm font-medium hover:underline"
+                style={{ color: colors.primary }}
+              >
+                Forgot Password?
+              </button>
+            </div>
+
             <Button
               type="submit"
               fullWidth
               disabled={loading}
-              className="mt-6"
+              className="mt-4"
             >
               {loading ? (
                 <span className="flex items-center justify-center">
@@ -115,28 +131,25 @@ const Login = () => {
                   Signing in...
                 </span>
               ) : (
-                <span className="flex items-center justify-center">
-                  <LogIn className="w-5 h-5 mr-2" />
-                  Sign In
-                </span>
+                'Sign In'
               )}
             </Button>
           </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-gray-600">
-              Don't have an account?{' '}
-              <Link to="/signup" className="text-purple-600 hover:text-purple-700 font-semibold">
-                Sign up
-              </Link>
-            </p>
-          </div>
         </div>
 
         {/* Footer */}
-        <p className="text-center text-white/80 text-sm mt-8">
-          © 2026 TurnUp. All rights reserved.
-        </p>
+        <div className="text-center mt-auto pb-6">
+          <p className="text-base" style={{ color: colors.textSecondary }}>
+            Don't have an account?{' '}
+            <Link 
+              to="/signup" 
+              className="font-semibold hover:underline"
+              style={{ color: colors.primary }}
+            >
+              Sign Up
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

@@ -1,3 +1,5 @@
+import { colors, borderRadius, shadows } from '../../theme';
+
 const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
   if (!isOpen) return null;
 
@@ -13,15 +15,26 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
       <div className="flex min-h-screen items-center justify-center p-4">
         {/* Backdrop */}
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+          className="fixed inset-0 transition-opacity"
+          style={{ backgroundColor: colors.overlay }}
           onClick={onClose}
         />
 
         {/* Modal */}
-        <div className={`relative bg-white rounded-xl shadow-xl ${sizes[size]} w-full max-h-[90vh] overflow-hidden`}>
+        <div 
+          className={`relative ${sizes[size]} w-full max-h-[90vh] overflow-hidden`}
+          style={{
+            backgroundColor: colors.background,
+            borderRadius: borderRadius.xl,
+            boxShadow: shadows.xxl,
+          }}
+        >
           {title && (
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-xl font-semibold text-gray-900">{title}</h3>
+            <div 
+              className="px-6 py-4 border-b"
+              style={{ borderColor: colors.border }}
+            >
+              <h3 className="text-xl font-semibold" style={{ color: colors.text }}>{title}</h3>
             </div>
           )}
           <div className="px-6 py-4 overflow-y-auto max-h-[calc(90vh-8rem)]">

@@ -55,7 +55,7 @@ const ExpenseTracker = ({ planId }) => {
 
   const handleSettleExpense = async (expenseId) => {
     try {
-      await expenseService.settleExpense(expenseId);
+      await expenseService.settleExpense(expenseId, user?.id);
       toast.success('Expense settled');
       fetchExpenses();
     } catch (error) {

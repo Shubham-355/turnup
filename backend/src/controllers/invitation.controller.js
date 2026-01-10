@@ -130,6 +130,23 @@ const respondToJoinRequest = asyncHandler(async (req, res) => {
   ApiResponse.success(result).send(res);
 });
 
+/**
+ * @route   GET /api/invitations/search-users
+ * @desc    Search users to invite
+ * @access  Private
+ */
+const searchUsers = asyncHandler(async (req, res) => {
+  const { query, limit } = req.query;
+
+  const users = await invitationService.searchUsers(
+    query,
+    req.user.id,
+    parseInt(limit) || 10
+  );
+
+  ApiResponse.success(users).send(res);
+});
+
 module.exports = {
   sendInvitation,
   getReceivedInvitations,
@@ -139,4 +156,5 @@ module.exports = {
   requestToJoin,
   getJoinRequests,
   respondToJoinRequest,
+  searchUsers,
 };

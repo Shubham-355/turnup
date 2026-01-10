@@ -23,6 +23,7 @@ import { activityService } from '../services/activityService';
 import { invitationService } from '../services/invitationService';
 import usePlanStore from '../stores/planStore';
 import { formatDate } from '../utils/dateUtils';
+import { colors } from '../theme';
 
 const PlanDetails = () => {
   const { planId } = useParams();
@@ -127,27 +128,30 @@ const PlanDetails = () => {
   ];
 
   return (
-    <div>
+    <div className="p-6" style={{ backgroundColor: colors.background }}>
       {/* Back Button */}
       <button
         onClick={() => navigate('/dashboard')}
-        className="flex items-center text-gray-600 hover:text-gray-900 mb-6"
+        className="flex items-center hover:opacity-80 mb-6"
+        style={{ color: colors.textSecondary }}
       >
         <ArrowLeft className="w-5 h-5 mr-2" />
         Back to Dashboard
       </button>
 
       {/* Plan Header */}
-      <Card className="p-6 mb-6">
+      <Card className="p-6 mb-6" style={{ backgroundColor: colors.surface }}>
         <div className="flex justify-between items-start">
           <div className="flex-1">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{currentPlan.name}</h1>
+            <h1 className="text-3xl font-bold mb-2" style={{ color: colors.text }}>{currentPlan.name}</h1>
             <div className="flex flex-wrap items-center gap-3 mb-4">
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                currentPlan.category === 'nightout' 
-                  ? 'bg-purple-100 text-purple-700' 
-                  : 'bg-blue-100 text-blue-700'
-              }`}>
+              <span 
+                className="px-3 py-1 rounded-full text-sm font-semibold"
+                style={{
+                  backgroundColor: currentPlan.category === 'NIGHTOUT' ? `${colors.nightout}20` : `${colors.trip}20`,
+                  color: currentPlan.category === 'NIGHTOUT' ? colors.nightout : colors.trip
+                }}
+              >
                 {currentPlan.category}
               </span>
               <span className="px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-700">

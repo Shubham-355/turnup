@@ -54,7 +54,13 @@ export const invitationService = {
 
   // Join by invite code
   joinByCode: async (inviteCode: string): Promise<ApiResponse<Plan>> => {
-    const response = await api.post('/invitations/join', { inviteCode });
+    const response = await api.post('/plans/join', { inviteCode });
+    return response.data;
+  },
+
+  // Get plan by invite code (preview before joining)
+  getPlanByInviteCode: async (inviteCode: string): Promise<ApiResponse<Plan>> => {
+    const response = await api.get(`/plans/invite/${inviteCode}`);
     return response.data;
   },
 

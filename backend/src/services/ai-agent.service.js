@@ -1,4 +1,4 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { GoogleGenAI } = require('@google/genai');
 const planService = require('./plan.service');
 const activityService = require('./activity.service');
 const locationService = require('./location.service');
@@ -10,7 +10,7 @@ const ApiError = require('../utils/ApiError');
 
 class AIAgentService {
   constructor() {
-    this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    this.genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     this.conversationHistories = new Map();
   }
 
@@ -20,14 +20,46 @@ class AIAgentService {
   getAvailableTools() {
     return [
       {
+        name: 'createTripWithActivities',
+        description: 'Creates a complete trip with plan and activities. Use this when user mentions places/destinations. This will automatically search for locations, create the plan, and add activities with proper location data.',
+        parameters: {
+          type: 'object',
+          properties: {
+            tripName: {
+              type: 'string',
+              description: 'Name for the trip. Generate creative name based on destinations.',
+            },
+            description: {
+              type: 'string', 
+              description: 'Description of the trip',
+            },
+            places: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'List of place names to visit (e.g., ["LDRP College", "Cafezza Cafe", "La Pinoz Pizza"])',
+            },
+            category: {
+              type: 'string',
+              enum: ['TRIP', 'NIGHTOUT'],
+              description: 'TRIP for trips/outings, NIGHTOUT for parties',
+            },
+            date: {
+              type: 'string',
+              description: 'Date for the trip in YYYY-MM-DD format. Use today if not specified.',
+            },
+          },
+          required: ['tripName', 'places', 'category'],
+        },
+      },
+      {
         name: 'createPlan',
-        description: 'Creates a new plan (trip, nightout, picnic, etc.). Use this when user wants to create any kind of event or gathering.',
+        description: 'Creates a new plan (trip, nightout, picnic, etc.). Generate a creative name based on the destination or theme if user does not specify one. Use todays date if no date specified.',
         parameters: {
           type: 'object',
           properties: {
             name: {
               type: 'string',
-              description: 'Name of the plan/event',
+              description: 'Name of the plan/event. Generate a creative name if not provided.',
             },
             description: {
               type: 'string',
@@ -41,18 +73,32 @@ class AIAgentService {
             type: {
               type: 'string',
               enum: ['PRIVATE', 'PUBLIC'],
-              description: 'Privacy type. PRIVATE for invite-only, PUBLIC for discoverable plans.',
+              description: 'Privacy type. PRIVATE for invite-only, PUBLIC for discoverable plans. Default to PRIVATE.',
             },
             startDate: {
               type: 'string',
-              description: 'Start date in ISO format (YYYY-MM-DD)',
+              description: 'Start date in ISO format (YYYY-MM-DD). Use todays date if not specified.',
             },
             endDate: {
               type: 'string',
-              description: 'End date in ISO format (YYYY-MM-DD)',
+              description: 'End date in ISO format (YYYY-MM-DD). Same as startDate if not specified.',
             },
           },
           required: ['name', 'category'],
+        },
+      },
+      {
+        name: 'searchPlace',
+        description: 'Search for a place/location using Google Maps to get its details like address, coordinates, etc.',
+        parameters: {
+          type: 'object',
+          properties: {
+            query: {
+              type: 'string',
+              description: 'Place name or address to search for',
+            },
+          },
+          required: ['query'],
         },
       },
       {
@@ -436,8 +482,23 @@ class AIAgentService {
   async executeTool(toolName, parameters, userId) {
     try {
       switch (toolName) {
+        case 'createTripWithActivities':
+          return await this.createTripWithActivities(userId, parameters);
+
+        case 'searchPlace':
+          return await this.searchGooglePlaces(parameters.query);
+
         case 'createPlan':
-          return await planService.createPlan(userId, parameters);
+          // Set defaults
+          const today = new Date().toISOString().split('T')[0];
+          const planData = {
+            ...parameters,
+            startDate: parameters.startDate || today,
+            endDate: parameters.endDate || parameters.startDate || today,
+            type: parameters.type || 'PRIVATE',
+          };
+          const plan = await planService.createPlan(userId, planData);
+          return { success: true, plan, message: `Plan "${plan.name}" created successfully!` };
 
         case 'listUserPlans':
           return await planService.getUserPlans(userId, {
@@ -562,61 +623,126 @@ class AIAgentService {
   }
 
   /**
+   * Call Gemini API with retry logic for rate limits
+   */
+  async callGeminiWithRetry(params, maxRetries = 3) {
+    let lastError;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await this.genAI.models.generateContent(params);
+        return response;
+      } catch (error) {
+        lastError = error;
+        
+        // Check if it's a rate limit error (429)
+        if (error.status === 429 || error.message?.includes('429') || error.message?.includes('RESOURCE_EXHAUSTED')) {
+          // Extract retry delay from error if available
+          let retryDelay = 5000 * attempt; // Default: 5s, 10s, 15s
+          
+          const retryMatch = error.message?.match(/retry in (\d+(?:\.\d+)?)/i);
+          if (retryMatch) {
+            retryDelay = Math.ceil(parseFloat(retryMatch[1]) * 1000) + 1000; // Add 1s buffer
+          }
+          
+          console.log(`Rate limited (attempt ${attempt}/${maxRetries}). Retrying in ${retryDelay}ms...`);
+          
+          if (attempt < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+            continue;
+          }
+        }
+        
+        // For non-rate-limit errors or final attempt, throw
+        throw error;
+      }
+    }
+    
+    throw lastError;
+  }
+
+  /**
    * Process user message with AI agent
    */
   async chat(userId, userMessage, context = {}) {
     try {
-      const model = this.genAI.getGenerativeModel({
-        model: 'gemini-2.0-flash-exp',
-        tools: [{ functionDeclarations: this.getAvailableTools() }],
-      });
+      const today = new Date().toISOString().split('T')[0];
+      
+      const systemPrompt = `You are a SMART AI assistant for TurnUp event planning app. Today's date is ${today}.
 
+IMPORTANT: When user mentions creating a trip with places/destinations (like "trip from X to Y" or "trip to A, B, C"):
+- Use createTripWithActivities tool - it automatically searches locations on Google Maps and creates activities
+- Extract ALL place names from the message (starting point and destinations)
+- Generate a fun creative name for the trip based on the vibe
+- The tool will automatically find real locations and add them as activities
+
+Examples:
+- "create trip from ldrp to cafezza" → use createTripWithActivities with places: ["LDRP", "Cafezza"]
+- "plan a trip to starbucks then la pinoz" → use createTripWithActivities with places: ["Starbucks", "La Pinoz"]
+- "nightout at skybar and cue bar" → use createTripWithActivities with places: ["Skybar", "Cue Bar"], category: NIGHTOUT
+
+For simple plans without specific places, use createPlan.
+For searching a location, use searchPlace.
+
+Always respond with what you created - include the plan name and the activities/locations added.
+
+Be friendly and confirm what you created with details.`;
+
+      // Build conversation with history
       const history = this.getConversationHistory(userId);
+      let conversationText = systemPrompt + '\n\n';
+      
+      for (const msg of history) {
+        if (msg.role === 'user') {
+          conversationText += `User: ${msg.parts[0]?.text || ''}\n`;
+        } else {
+          conversationText += `Assistant: ${msg.parts[0]?.text || ''}\n`;
+        }
+      }
+      conversationText += `User: ${userMessage}\n`;
 
-      const systemInstruction = `You are an AI assistant for TurnUp event planning. Help users create plans, activities, expenses, and more. Be friendly and execute actions using available tools.`;
-
-      const chat = model.startChat({
-        history: history,
-        systemInstruction: systemInstruction,
+      // Call Gemini API with retry logic
+      const response = await this.callGeminiWithRetry({
+        model: 'gemini-2.5-flash',
+        contents: conversationText,
+        config: {
+          tools: [{ functionDeclarations: this.getAvailableTools() }]
+        }
       });
-
-      let result = await chat.sendMessage(userMessage);
-      let response = result.response;
 
       const toolCalls = [];
       const toolResults = [];
+      let finalText = response.text || '';
 
-      if (response.functionCalls && response.functionCalls().length > 0) {
-        const functionCalls = response.functionCalls();
-
-        for (const functionCall of functionCalls) {
+      // Check for function calls
+      if (response.functionCalls && response.functionCalls.length > 0) {
+        for (const functionCall of response.functionCalls) {
           console.log(`Executing: ${functionCall.name}`, functionCall.args);
           
           const toolResult = await this.executeTool(functionCall.name, functionCall.args, userId);
           
           toolCalls.push({ name: functionCall.name, args: functionCall.args });
           toolResults.push({ name: functionCall.name, result: toolResult });
-
-          result = await chat.sendMessage([{
-            functionResponse: { name: functionCall.name, response: toolResult }
-          }]);
-          response = result.response;
         }
+
+        // Get final response after tool execution with retry
+        const followUp = await this.callGeminiWithRetry({
+          model: 'gemini-2.5-flash',
+          contents: `${conversationText}\n\nTool results: ${JSON.stringify(toolResults)}\n\nBased on these results, provide a friendly confirmation to the user about what was created.`
+        });
+        
+        finalText = followUp.text || 'Done!';
       }
+
+      if (!finalText) finalText = 'Done!';
 
       // Update conversation history
       history.push(
-        {
-          role: 'user',
-          parts: [{ text: userMessage }],
-        },
-        {
-          role: 'model',
-          parts: [{ text: finalText }],
-        }
+        { role: 'user', parts: [{ text: userMessage }] },
+        { role: 'model', parts: [{ text: finalText }] }
       );
 
-      // Keep only last 20 messages to manage memory
+      // Keep only last 20 messages
       if (history.length > 20) {
         history.splice(0, history.length - 20);
       }
@@ -628,6 +754,13 @@ class AIAgentService {
       };
     } catch (error) {
       console.error('AI Agent error:', error);
+      this.clearConversationHistory(userId);
+      
+      // Provide user-friendly message for rate limits
+      if (error.status === 429 || error.message?.includes('429') || error.message?.includes('RESOURCE_EXHAUSTED')) {
+        throw new ApiError(429, 'AI service is temporarily busy. Please wait a moment and try again.');
+      }
+      
       throw new ApiError(500, `AI Agent error: ${error.message}`);
     }
   }
@@ -648,18 +781,115 @@ class AIAgentService {
     return { message: 'Conversation reset successfully' };
   }
 
-  /**const finalText = response.text();
+  /**
+   * Create a complete trip with plan and activities from place names
+   */
+  async createTripWithActivities(userId, params) {
+    try {
+      const { tripName, description, places, category, date } = params;
+      const today = date || new Date().toISOString().split('T')[0];
+      
+      // 1. Create the plan first
+      const planData = {
+        name: tripName,
+        description: description || `Trip to ${places.join(', ')}`,
+        category: category || 'TRIP',
+        type: 'PRIVATE',
+        startDate: today,
+        endDate: today,
+      };
+      
+      const plan = await planService.createPlan(userId, planData);
+      
+      // 2. Search for each place and create activities
+      const activities = [];
+      let order = 1;
+      
+      for (const placeName of places) {
+        // Search for the place using Google Maps
+        const searchResult = await this.searchGooglePlaces(placeName);
+        
+        let locationData = {};
+        if (searchResult.success && searchResult.places.length > 0) {
+          const place = searchResult.places[0];
+          locationData = {
+            locationName: place.name,
+            locationAddress: place.address,
+            latitude: place.location.lat,
+            longitude: place.location.lng,
+            placeId: place.place_id,
+          };
+        }
+        
+        // Create activity with location
+        const activityData = {
+          name: locationData.locationName || placeName,
+          description: `Visit ${placeName}`,
+          date: today,
+          order: order++,
+          ...locationData,
+        };
+        
+        try {
+          const activity = await activityService.createActivity(plan.id, userId, activityData);
+          activities.push({
+            id: activity.id,
+            name: activity.name,
+            location: locationData.locationName || placeName,
+            address: locationData.locationAddress || 'Location not found',
+          });
+        } catch (err) {
+          console.error(`Failed to create activity for ${placeName}:`, err);
+          activities.push({
+            name: placeName,
+            error: 'Failed to create activity',
+          });
+        }
+      }
+      
+      return {
+        success: true,
+        plan: {
+          id: plan.id,
+          name: plan.name,
+          category: plan.category,
+          date: today,
+        },
+        activities: activities,
+        message: `Created trip "${plan.name}" with ${activities.length} activities!`,
+      };
+    } catch (error) {
+      console.error('Create trip error:', error);
+      return {
+        error: true,
+        message: 'Failed to create trip',
+        details: error.message,
+      };
+    }
+  }
 
-      history.push(
-        { role: 'user', parts: [{ text: userMessage }] },
-        { role: 'model', parts: [{ text: finalText }] }
-      );
+  /**
+   * Get directions between two locations using Google Maps Directions API
+   */
+  async getGoogleMapsDirections(origin, destination, mode = 'driving') {
+    try {
+      const axios = require('axios');
+      const apiKey = process.env.MAP_API_KEY;
 
-      if (history.length > 20) {
-        history.splice(0, history.length - 20);
+      if (!apiKey) {
+        throw new Error('Google Maps API key not configured');
       }
 
-      return { message: finalText, toolCalls, toolResults if (response.data.status !== 'OK') {
+      const response = await axios.get('https://maps.googleapis.com/maps/api/directions/json', {
+        params: {
+          origin,
+          destination,
+          mode,
+          key: apiKey,
+        },
+      });
+
+      if (response.data.status !== 'OK') {
         return {
           error: true,
           message: `Failed to get directions: ${response.data.status}`,

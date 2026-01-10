@@ -31,8 +31,15 @@ export const planService = {
     return response.data;
   },
 
-  joinPlan: async (planId) => {
-    const response = await api.post(`/plans/${planId}/join`);
+  // Join plan by invite code
+  joinPlanByCode: async (inviteCode) => {
+    const response = await api.post('/plans/join', { inviteCode });
+    return response.data;
+  },
+
+  // Request to join a public plan
+  requestToJoin: async (planId, message) => {
+    const response = await api.post(`/plans/${planId}/join-request`, { message });
     return response.data;
   },
 

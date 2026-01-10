@@ -68,10 +68,7 @@ export default function ExpensesScreen() {
     const myShare = item.shares.find((s) => s.userId === user?.id);
 
     return (
-      <TouchableOpacity
-        style={styles.expenseCard}
-        onPress={() => router.push(`/plans/${id}/expenses/${item.id}`)}
-      >
+      <View style={styles.expenseCard}>
         <View style={styles.expenseIcon}>
           <Ionicons name="receipt-outline" size={20} color={colors.text} />
         </View>
@@ -79,7 +76,7 @@ export default function ExpensesScreen() {
           <Text style={styles.expenseTitle}>{item.title}</Text>
           <View style={styles.expenseMeta}>
             <Text style={styles.expensePaidBy}>
-              Paid by {isPaidByMe ? 'you' : item.paidBy.displayName || item.paidBy.username}
+              Paid by {isPaidByMe ? 'you' : item.paidBy?.displayName || item.paidBy?.username || 'Unknown'}
             </Text>
             {item.activity && (
               <Text style={styles.expenseActivity}>• {item.activity.name}</Text>
@@ -99,7 +96,7 @@ export default function ExpensesScreen() {
             <Text style={styles.myShare}>You paid</Text>
           )}
         </View>
-      </TouchableOpacity>
+      </View>
     );
   };
 

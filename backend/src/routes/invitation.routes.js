@@ -12,6 +12,9 @@ const {
 // All routes require authentication
 router.use(authenticate);
 
+// Search users to invite
+router.get('/search-users', invitationController.searchUsers);
+
 // User's received invitations
 router.get('/', getInvitationsValidation, validate, invitationController.getReceivedInvitations);
 

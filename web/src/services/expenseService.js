@@ -21,8 +21,21 @@ export const expenseService = {
     return response.data;
   },
 
-  settleExpense: async (expenseId) => {
-    const response = await api.post(`/expenses/${expenseId}/settle`);
+  // Settle a user's share of an expense
+  settleExpense: async (expenseId, userId) => {
+    const response = await api.post(`/expenses/${expenseId}/settle/${userId}`);
+    return response.data;
+  },
+
+  // Get expense summary for a plan
+  getExpenseSummary: async (planId) => {
+    const response = await api.get(`/plans/${planId}/expenses/summary`);
+    return response.data;
+  },
+
+  // Get user's debts for a plan
+  getUserDebts: async (planId) => {
+    const response = await api.get(`/plans/${planId}/expenses/debts`);
     return response.data;
   },
 };
