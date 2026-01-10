@@ -23,6 +23,8 @@ module.exports = {
   
   // Map API
   mapApiKey: process.env.MAP_API_KEY,
+  locationIqKey: process.env.LOCATIONIQ_API_KEY,
+  maptilerKey: process.env.MAPTILER_API_KEY,
   
   // CORS
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:8081',

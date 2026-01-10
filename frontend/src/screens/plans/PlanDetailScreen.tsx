@@ -242,11 +242,22 @@ export default function PlanDetailScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Activities</Text>
-              {canManage && (
-                <TouchableOpacity onPress={() => router.push(`/plans/${id}/activities/create`)}>
-                  <Ionicons name="add-circle" size={24} color={colors.primary} />
-                </TouchableOpacity>
-              )}
+              <View style={styles.sectionActions}>
+                {activities.length > 0 && activities.some(a => a.latitude && a.longitude) && (
+                  <TouchableOpacity 
+                    onPress={() => router.push(`/plans/${id}/route`)}
+                    style={styles.routeButton}
+                  >
+                    <Ionicons name="navigate" size={18} color={colors.primary} />
+                    <Text style={styles.routeButtonText}>View Route</Text>
+                  </TouchableOpacity>
+                )}
+                {canManage && (
+                  <TouchableOpacity onPress={() => router.push(`/plans/${id}/activities/create`)}>
+                    <Ionicons name="add-circle" size={24} color={colors.primary} />
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
             
             {activities.length === 0 ? (
@@ -443,6 +454,25 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.md,
+  },
+  sectionActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  routeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.primary + '20',
+    borderRadius: borderRadius.md,
+  },
+  routeButtonText: {
+    ...typography.caption,
+    color: colors.primary,
+    fontWeight: '600',
   },
   sectionTitle: {
     ...typography.h4,
