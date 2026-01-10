@@ -185,6 +185,7 @@ class PlanService {
                 id: true,
                 username: true,
                 displayName: true,
+                email: true,
                 avatar: true,
               },
             },
