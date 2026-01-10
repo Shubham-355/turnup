@@ -156,58 +156,176 @@ class LocationService {
   }
 
   /**
-   * Search places using map API
-   * This is a proxy to the map API (Google Maps or Mapbox)
+   * Search places using Google Places API
    */
   async searchPlaces(query, location) {
-    // This is a placeholder - in production, you would call the actual map API
-    // For Google Maps: https://maps.googleapis.com/maps/api/place/textsearch/json
-    // For Mapbox: https://api.mapbox.com/geocoding/v5/mapbox.places/{query}.json
-
     if (!config.mapApiKey) {
       throw ApiError.internal('Map API not configured');
     }
 
-    // Example response format (to be replaced with actual API call)
-    // You would use fetch or axios to call the API
-    return {
-      message: 'Place search endpoint ready. Configure MAP_API_KEY and implement the API call.',
-      query,
-      location,
-    };
+    try {
+      const axios = require('axios');
+      const params = {
+        input: query,
+        key: config.mapApiKey,
+        types: 'establishment|geocode',
+      };
+
+      if (location && location.lat && location.lng) {
+        params.location = `${location.lat},${location.lng}`;
+        params.radius = 50000; // 50km radius
+      }
+
+      const response = await axios.get(
+        'https://maps.googleapis.com/maps/api/place/autocomplete/json',
+        { params }
+      );
+
+      if (response.data.status !== 'OK' && response.data.status !== 'ZERO_RESULTS') {
+        throw new Error(`Google Places API error: ${response.data.status}`);
+      }
+
+      return response.data.predictions.map(prediction => ({
+        placeId: prediction.place_id,
+        name: prediction.structured_formatting.main_text,
+        address: prediction.description,
+        types: prediction.types,
+      }));
+    } catch (error) {
+      console.error('Search places error:', error);
+      throw ApiError.internal('Failed to search places');
+    }
   }
 
   /**
-   * Get place details
+   * Get place details by place ID
    */
   async getPlaceDetails(placeId) {
     if (!config.mapApiKey) {
       throw ApiError.internal('Map API not configured');
     }
 
-    // Placeholder for actual API implementation
-    return {
-      message: 'Place details endpoint ready. Configure MAP_API_KEY and implement the API call.',
-      placeId,
-    };
+    try {
+      const axios = require('axios');
+      const response = await axios.get(
+        'https://maps.googleapis.com/maps/api/place/details/json',
+        {
+          params: {
+            place_id: placeId,
+            fields: 'name,formatted_address,geometry,place_id,types,rating',
+            key: config.mapApiKey,
+          },
+        }
+      );
+
+      if (response.data.status !== 'OK') {
+        throw new Error(`Google Places API error: ${response.data.status}`);
+      }
+
+      const place = response.data.result;
+      return {
+        placeId: place.place_id,
+        name: place.name,
+        address: place.formatted_address,
+        latitude: place.geometry.location.lat,
+        longitude: place.geometry.location.lng,
+        types: place.types,
+        rating: place.rating,
+      };
+    } catch (error) {
+      console.error('Get place details error:', error);
+      throw ApiError.internal('Failed to get place details');
+    }
   }
 
   /**
-   * Get directions between two points
-   * This returns data for client-side map rendering
+   * Get directions between waypoints using Google Directions API
    */
   async getDirections(origin, destination, waypoints = []) {
     if (!config.mapApiKey) {
       throw ApiError.internal('Map API not configured');
     }
 
-    // Placeholder for actual API implementation
-    return {
-      message: 'Directions endpoint ready. Configure MAP_API_KEY and implement the API call.',
-      origin,
-      destination,
-      waypoints,
-    };
+    try {
+      const axios = require('axios');
+      const params = {
+        origin: `${origin.latitude},${origin.longitude}`,
+        destination: `${destination.latitude},${destination.longitude}`,
+        key: config.mapApiKey,
+        mode: 'driving',
+        alternatives: false,
+      };
+
+      // Add intermediate waypoints if any
+      if (waypoints && waypoints.length > 0) {
+        const waypointsStr = waypoints
+          .map(wp => `${wp.latitude},${wp.longitude}`)
+          .join('|');
+        params.waypoints = `optimize:true|${waypointsStr}`;
+      }
+
+      const response = await axios.get(
+        'https://maps.googleapis.com/maps/api/directions/json',
+        { params }
+      );
+
+      if (response.data.status !== 'OK') {
+        throw new Error(`Directions API error: ${response.data.status}`);
+      }
+
+      const route = response.data.routes[0];
+
+      // Extract route information
+      const routeData = {
+        distance: {
+          text: route.legs.reduce((sum, l) => sum + l.distance.value, 0) / 1000 + ' km',
+          value: route.legs.reduce((sum, l) => sum + l.distance.value, 0),
+        },
+        duration: {
+          text: this.formatDuration(route.legs.reduce((sum, l) => sum + l.duration.value, 0)),
+          value: route.legs.reduce((sum, l) => sum + l.duration.value, 0),
+        },
+        polyline: route.overview_polyline.points,
+        bounds: route.bounds,
+        legs: route.legs.map(leg => ({
+          distance: leg.distance,
+          duration: leg.duration,
+          startAddress: leg.start_address,
+          endAddress: leg.end_address,
+          startLocation: leg.start_location,
+          endLocation: leg.end_location,
+          steps: leg.steps.map(step => ({
+            distance: step.distance,
+            duration: step.duration,
+            instruction: step.html_instructions.replace(/<[^>]*>/g, ''),
+            polyline: step.polyline.points,
+          })),
+        })),
+      };
+
+      // If optimized, return the waypoint order
+      if (route.waypoint_order) {
+        routeData.waypointOrder = route.waypoint_order;
+      }
+
+      return routeData;
+    } catch (error) {
+      console.error('Get directions error:', error);
+      throw ApiError.internal('Failed to get directions');
+    }
+  }
+
+  /**
+   * Format duration in seconds to readable string
+   */
+  formatDuration(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
   }
 
   /**
