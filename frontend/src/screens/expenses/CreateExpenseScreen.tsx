@@ -126,8 +126,8 @@ export default function CreateExpenseScreen() {
 
   const splitOptions: { type: SplitType; label: string; icon: string }[] = [
     { type: 'EQUAL', label: 'Split Equally', icon: 'git-compare-outline' },
-    { type: 'EXACT', label: 'Exact Amounts', icon: 'calculator-outline' },
-    { type: 'PERCENTAGE', label: 'By Percentage', icon: 'pie-chart-outline' },
+    { type: 'CUSTOM', label: 'Custom Amounts', icon: 'calculator-outline' },
+    { type: 'BY_ITEM', label: 'By Item', icon: 'pie-chart-outline' },
   ];
 
   const calculatedShares = calculateSplit();

@@ -61,19 +61,19 @@ export default function RootLayout() {
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="plans/[id]" />
             <Stack.Screen name="plans/create" />
+            <Stack.Screen name="plans/[id]/index" />
             <Stack.Screen name="plans/[id]/chat" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="plans/[id]/map" options={{ animation: 'slide_from_right' }} />
-            <Stack.Screen name="plans/[id]/expenses" options={{ animation: 'slide_from_right' }} />
-            <Stack.Screen name="plans/[id]/media" options={{ animation: 'slide_from_right' }} />
-            <Stack.Screen name="plans/[id]/members" options={{ animation: 'slide_from_right' }} />
-            <Stack.Screen name="plans/[id]/settings" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="plans/[id]/route" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="plans/[id]/activities/create" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="plans/[id]/activities/[activityId]" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="plans/[id]/expenses/index" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="plans/[id]/expenses/create" options={{ presentation: 'modal' }} />
-            <Stack.Screen name="profile" options={{ animation: 'slide_from_left' }} />
             <Stack.Screen name="notifications" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="join" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="settings/password" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
           </Stack>
           {/* AI Assistant Floating Button - available across all screens */}
           {isAuthenticated && <FloatingAIButton />}
