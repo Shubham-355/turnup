@@ -1,0 +1,354 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==================== USER MODELS ====================
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  password      String
+  username      String   @unique
+  displayName   String?
+  avatar        String?
+  phone         String?
+  isVerified    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  ownedPlans        Plan[]           @relation("PlanOwner")
+  planMemberships   PlanMember[]
+  sentInvitations   Invitation[]     @relation("InvitationSender")
+  receivedInvitations Invitation[]   @relation("InvitationReceiver")
+  joinRequests      JoinRequest[]
+  messages          Message[]
+  expenses          Expense[]        @relation("ExpensePaidBy")
+  expenseShares     ExpenseShare[]
+  media             Media[]
+  locations         UserLocation[]
+  notifications     Notification[]
+
+  @@index([email])
+  @@index([username])
+}
+
+model UserLocation {
+  id        String   @id @default(uuid())
+  userId    String
+  planId    String
+  latitude  Float
+  longitude Float
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, planId])
+  @@index([planId])
+}
+
+// ==================== PLAN MODELS ====================
+
+enum PlanCategory {
+  NIGHTOUT
+  TRIP
+}
+
+enum PlanType {
+  PRIVATE
+  PUBLIC
+}
+
+enum PlanStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+model Plan {
+  id          String       @id @default(uuid())
+  name        String
+  description String?
+  category    PlanCategory
+  type        PlanType     @default(PRIVATE)
+  status      PlanStatus   @default(ACTIVE)
+  coverImage  String?
+  inviteCode  String       @unique @default(uuid())
+  ownerId     String
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  owner         User           @relation("PlanOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members       PlanMember[]
+  activities    Activity[]
+  invitations   Invitation[]
+  joinRequests  JoinRequest[]
+  messages      Message[]
+  expenses      Expense[]
+  media         Media[]
+  userLocations UserLocation[]
+
+  @@index([ownerId])
+  @@index([inviteCode])
+  @@index([type, status])
+}
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum MemberStatus {
+  ACTIVE
+  LEFT
+  REMOVED
+}
+
+model PlanMember {
+  id        String       @id @default(uuid())
+  planId    String
+  userId    String
+  role      MemberRole   @default(MEMBER)
+  status    MemberStatus @default(ACTIVE)
+  joinedAt  DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, userId])
+  @@index([userId])
+}
+
+// ==================== ACTIVITY MODELS ====================
+
+model Activity {
+  id          String    @id @default(uuid())
+  planId      String
+  name        String
+  description String?
+  date        DateTime?
+  time        String?
+  order       Int       @default(0)
+
+  // Location details
+  locationName    String?
+  locationAddress String?
+  latitude        Float?
+  longitude       Float?
+  placeId         String?   // For map API reference
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  plan     Plan      @relation(fields: [planId], references: [id], onDelete: Cascade)
+  expenses Expense[]
+  media    Media[]
+
+  @@index([planId])
+  @@index([date])
+}
+
+// ==================== INVITATION & JOIN REQUEST MODELS ====================
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+model Invitation {
+  id         String           @id @default(uuid())
+  planId     String
+  senderId   String
+  receiverId String?          // Null for link-based invitations
+  email      String?          // For email invitations
+  status     InvitationStatus @default(PENDING)
+  expiresAt  DateTime?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  plan     Plan  @relation(fields: [planId], references: [id], onDelete: Cascade)
+  sender   User  @relation("InvitationSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User? @relation("InvitationReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@index([planId])
+  @@index([receiverId])
+  @@index([status])
+}
+
+enum JoinRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model JoinRequest {
+  id        String            @id @default(uuid())
+  planId    String
+  userId    String
+  message   String?
+  status    JoinRequestStatus @default(PENDING)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, userId])
+  @@index([status])
+}
+
+// ==================== CHAT/MESSAGE MODELS ====================
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  LOCATION
+  SYSTEM
+}
+
+model Message {
+  id        String      @id @default(uuid())
+  planId    String
+  senderId  String
+  content   String
+  type      MessageType @default(TEXT)
+  metadata  Json?       // For storing additional data like image URLs, location coords
+  isDeleted Boolean     @default(false)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  plan   Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  sender User @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([planId, createdAt])
+  @@index([senderId])
+}
+
+// ==================== EXPENSE/BILL SPLITTING MODELS ====================
+
+enum SplitType {
+  EQUAL
+  CUSTOM
+  BY_ITEM
+}
+
+model Expense {
+  id          String    @id @default(uuid())
+  planId      String
+  activityId  String?
+  paidById    String
+  title       String
+  description String?
+  amount      Float
+  currency    String    @default("USD")
+  splitType   SplitType @default(EQUAL)
+  receipt     String?   // URL to receipt image
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  plan     Plan           @relation(fields: [planId], references: [id], onDelete: Cascade)
+  activity Activity?      @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  paidBy   User           @relation("ExpensePaidBy", fields: [paidById], references: [id], onDelete: Cascade)
+  shares   ExpenseShare[]
+
+  @@index([planId])
+  @@index([activityId])
+  @@index([paidById])
+}
+
+model ExpenseShare {
+  id        String  @id @default(uuid())
+  expenseId String
+  userId    String
+  amount    Float
+  isPaid    Boolean @default(false)
+  paidAt    DateTime?
+
+  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([expenseId, userId])
+  @@index([userId])
+}
+
+// ==================== MEDIA MODELS ====================
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
+model Media {
+  id         String    @id @default(uuid())
+  planId     String
+  activityId String?
+  uploaderId String
+  type       MediaType
+  url        String
+  publicId   String    // Cloudinary public ID
+  thumbnail  String?
+  caption    String?
+  createdAt  DateTime  @default(now())
+
+  plan     Plan      @relation(fields: [planId], references: [id], onDelete: Cascade)
+  activity Activity? @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  uploader User      @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+
+  @@index([planId])
+  @@index([activityId])
+  @@index([uploaderId])
+}
+
+// ==================== NOTIFICATION MODELS ====================
+
+enum NotificationType {
+  PLAN_INVITE
+  JOIN_REQUEST
+  JOIN_APPROVED
+  JOIN_REJECTED
+  NEW_ACTIVITY
+  NEW_MESSAGE
+  NEW_EXPENSE
+  EXPENSE_SETTLED
+  PLAN_UPDATE
+  MEMBER_JOINED
+  MEMBER_LEFT
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  data      Json?            // Additional data for navigation
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+}
