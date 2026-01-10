@@ -23,7 +23,8 @@ import { TextInput } from '../../components/ui/TextInput';
 import { locationService, Place, PlaceDetails } from '../../services/location';
 
 export default function CreateActivityScreen() {
-  const { planId } = useLocalSearchParams<{ planId: string }>();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const planId = id; // Route uses [id] param
   const { createActivity, isLoading } = usePlanStore();
 
   const [name, setName] = useState('');
