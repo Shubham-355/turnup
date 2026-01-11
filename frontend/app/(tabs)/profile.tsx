@@ -40,7 +40,7 @@ export default function ProfileScreen() {
     {
       icon: 'person-outline',
       label: 'Edit Profile',
-      onPress: () => router.push('/profile/edit'),
+      onPress: () => router.push('/settings/edit-profile'),
     },
     {
       icon: 'notifications-outline',
@@ -50,22 +50,27 @@ export default function ProfileScreen() {
     {
       icon: 'lock-closed-outline',
       label: 'Change Password',
-      onPress: () => router.push('/profile/password'),
+      onPress: () => router.push('/settings/password'),
     },
     {
       icon: 'help-circle-outline',
       label: 'Help & Support',
-      onPress: () => {},
+      onPress: () => router.push('/settings/help'),
     },
     {
       icon: 'document-text-outline',
       label: 'Privacy Policy',
-      onPress: () => {},
+      onPress: () => router.push('/settings/privacy'),
+    },
+    {
+      icon: 'document-outline',
+      label: 'Terms of Service',
+      onPress: () => router.push('/settings/terms'),
     },
     {
       icon: 'information-circle-outline',
       label: 'About',
-      onPress: () => {},
+      onPress: () => router.push('/settings/about'),
     },
   ];
 

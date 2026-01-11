@@ -14,6 +14,200 @@ interface Message {
   routeData?: any;
 }
 
+// Parse place info from formatted text
+interface PlaceInfo {
+  name: string;
+  rating: string;
+  address: string;
+}
+
+// Component to render formatted AI messages
+const FormattedMessage = ({ text }: { text: string }) => {
+  const parseMessage = (content: string) => {
+    const lines = content.split('\n');
+    const elements: React.ReactNode[] = [];
+    let currentPlaces: PlaceInfo[] = [];
+
+    const renderInlineText = (text: string, key: string) => {
+      // Handle bold text with **text**
+      const parts = text.split(/(\*\*[^*]+\*\*)/g);
+      return parts.map((part, idx) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          return <Text key={`${key}-${idx}`} style={messageStyles.boldText}>{part.slice(2, -2)}</Text>;
+        }
+        return <Text key={`${key}-${idx}`}>{part}</Text>;
+      });
+    };
+
+    lines.forEach((line, index) => {
+      const trimmedLine = line.trim();
+      
+      // Check for numbered list items with place format
+      const numberedMatch = trimmedLine.match(/^(\d+)\.\s+(.+)$/);
+      
+      if (numberedMatch) {
+        const content = numberedMatch[2];
+        // Parse: **Name** (Rating: X.X) - Address
+        const placeMatch = content.match(/^\*\*([^*]+)\*\*\s*\(Rating:\s*([\d.]+)\)\s*-\s*(.+)$/);
+        
+        if (placeMatch) {
+          currentPlaces.push({
+            name: placeMatch[1],
+            rating: placeMatch[2],
+            address: placeMatch[3]
+          });
+        } else {
+          // Regular list item
+          if (currentPlaces.length > 0) {
+            elements.push(
+              <View key={`places-${index}`} style={messageStyles.placesList}>
+                {currentPlaces.map((place, pIdx) => (
+                  <View key={pIdx} style={messageStyles.placeItem}>
+                    <View style={messageStyles.placeHeader}>
+                      <Text style={messageStyles.placeName}>{place.name}</Text>
+                      <View style={messageStyles.ratingBadge}>
+                        <Text style={messageStyles.ratingText}>⭐ {place.rating}</Text>
+                      </View>
+                    </View>
+                    <Text style={messageStyles.placeAddress}>📍 {place.address}</Text>
+                  </View>
+                ))}
+              </View>
+            );
+            currentPlaces = [];
+          }
+          elements.push(
+            <View key={index} style={messageStyles.listItem}>
+              <Text style={messageStyles.listNumber}>{numberedMatch[1]}.</Text>
+              <Text style={messageStyles.listText}>{renderInlineText(content, `${index}`)}</Text>
+            </View>
+          );
+        }
+      } else {
+        // Flush places if we have them
+        if (currentPlaces.length > 0) {
+          elements.push(
+            <View key={`places-${index}`} style={messageStyles.placesList}>
+              {currentPlaces.map((place, pIdx) => (
+                <View key={pIdx} style={messageStyles.placeItem}>
+                  <View style={messageStyles.placeHeader}>
+                    <Text style={messageStyles.placeName}>{place.name}</Text>
+                    <View style={messageStyles.ratingBadge}>
+                      <Text style={messageStyles.ratingText}>⭐ {place.rating}</Text>
+                    </View>
+                  </View>
+                  <Text style={messageStyles.placeAddress}>📍 {place.address}</Text>
+                </View>
+              ))}
+            </View>
+          );
+          currentPlaces = [];
+        }
+        
+        if (trimmedLine) {
+          elements.push(
+            <Text key={index} style={messageStyles.paragraph}>
+              {renderInlineText(trimmedLine, `${index}`)}
+            </Text>
+          );
+        }
+      }
+    });
+
+    // Flush remaining places
+    if (currentPlaces.length > 0) {
+      elements.push(
+        <View key="places-final" style={messageStyles.placesList}>
+          {currentPlaces.map((place, pIdx) => (
+            <View key={pIdx} style={messageStyles.placeItem}>
+              <View style={messageStyles.placeHeader}>
+                <Text style={messageStyles.placeName}>{place.name}</Text>
+                <View style={messageStyles.ratingBadge}>
+                  <Text style={messageStyles.ratingText}>⭐ {place.rating}</Text>
+                </View>
+              </View>
+              <Text style={messageStyles.placeAddress}>📍 {place.address}</Text>
+            </View>
+          ))}
+        </View>
+      );
+    }
+
+    return elements;
+  };
+
+  return <View style={messageStyles.container}>{parseMessage(text)}</View>;
+};
+
+const messageStyles = StyleSheet.create({
+  container: {
+    gap: 8,
+  },
+  paragraph: {
+    fontSize: 16,
+    lineHeight: 22,
+    color: '#1f2937',
+  },
+  boldText: {
+    fontWeight: '700',
+  },
+  listItem: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 4,
+  },
+  listNumber: {
+    fontSize: 16,
+    color: '#7C3AED',
+    fontWeight: '600',
+  },
+  listText: {
+    fontSize: 16,
+    flex: 1,
+    color: '#1f2937',
+    lineHeight: 22,
+  },
+  placesList: {
+    gap: 10,
+    marginVertical: 8,
+  },
+  placeItem: {
+    backgroundColor: '#faf5ff',
+    borderWidth: 1,
+    borderColor: '#e9d5ff',
+    borderRadius: 12,
+    padding: 12,
+  },
+  placeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  placeName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1f2937',
+    flex: 1,
+  },
+  ratingBadge: {
+    backgroundColor: '#fef3c7',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  ratingText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#92400e',
+  },
+  placeAddress: {
+    fontSize: 13,
+    color: '#6b7280',
+    lineHeight: 18,
+  },
+});
+
 const AIAgentChat = ({ navigation, onClose }: AIAgentChatProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -128,9 +322,13 @@ const AIAgentChat = ({ navigation, onClose }: AIAgentChatProps) => {
           </View>
         )}
         <View style={[styles.messageBubble, isUser ? styles.userBubble : styles.aiBubble]}>
-          <Text style={[styles.messageText, isUser ? styles.userText : styles.aiText]}>
-            {message.text}
-          </Text>
+          {isUser ? (
+            <Text style={[styles.messageText, styles.userText]}>
+              {message.text}
+            </Text>
+          ) : (
+            <FormattedMessage text={message.text} />
+          )}
         </View>
         {isUser && (
           <View style={styles.userIcon}>

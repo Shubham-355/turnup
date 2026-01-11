@@ -3,10 +3,12 @@ import { Send } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
+import Avatar from '../ui/Avatar';
 import { chatService } from '../../services/chatService';
 import { getSocket } from '../../config/socket';
 import useAuthStore from '../../stores/authStore';
 import { getRelativeTime } from '../../utils/dateUtils';
+import { colors } from '../../theme';
 
 const ChatPanel = ({ planId }) => {
   const { user } = useAuthStore();
@@ -22,7 +24,8 @@ const ChatPanel = ({ planId }) => {
     return () => {
       const socket = getSocket();
       if (socket) {
-        socket.off('new-message');
+        socket.off('new_message');
+        socket.emit('leave_plan', planId);
       }
     };
   }, [planId]);
@@ -45,9 +48,9 @@ const ChatPanel = ({ planId }) => {
   const setupSocketListeners = () => {
     const socket = getSocket();
     if (socket) {
-      socket.emit('join-plan', planId);
+      socket.emit('join_plan', planId);
       
-      socket.on('new-message', (message) => {
+      socket.on('new_message', (message) => {
         if (message.planId === planId) {
           setMessages(prev => [...prev, message]);
         }
@@ -66,8 +69,9 @@ const ChatPanel = ({ planId }) => {
     const tempMessage = {
       id: Date.now(),
       content: newMessage,
-      user: { name: user.name },
-      createdAt: new Date(),
+      senderId: user.id,
+      sender: user,
+      createdAt: new Date().toISOString(),
     };
 
     setMessages(prev => [...prev, tempMessage]);
@@ -81,54 +85,121 @@ const ChatPanel = ({ planId }) => {
     }
   };
 
+  // Get sender info - handle both sender and user properties
+  const getSender = (message) => {
+    return message.sender || message.user || {};
+  };
+
+  const isOwnMessage = (message) => {
+    const sender = getSender(message);
+    return sender.id === user?.id || message.senderId === user?.id;
+  };
+
+  // Check if this message should show sender info (first in a group)
+  const shouldShowSenderInfo = (message, index) => {
+    if (isOwnMessage(message)) return false;
+    if (index === 0) return true;
+    
+    const prevMessage = messages[index - 1];
+    const currentSender = getSender(message);
+    const prevSender = getSender(prevMessage);
+    
+    return currentSender.id !== prevSender.id;
+  };
+
   return (
     <Card className="h-[600px] flex flex-col">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div 
+        className="flex-1 overflow-y-auto p-6 space-y-3"
+        style={{ backgroundColor: colors.background }}
+      >
         {loading ? (
-          <div className="text-center text-gray-500">Loading messages...</div>
+          <div style={{ color: colors.textSecondary }} className="text-center">
+            Loading messages...
+          </div>
         ) : messages.length === 0 ? (
-          <div className="text-center text-gray-500 mt-12">
+          <div style={{ color: colors.textSecondary }} className="text-center mt-12">
             No messages yet. Start the conversation!
           </div>
         ) : (
-          messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.user?.id === user?.id ? 'justify-end' : 'justify-start'}`}
-            >
+          messages.map((message, index) => {
+            const sender = getSender(message);
+            const ownMessage = isOwnMessage(message);
+            const showSenderInfo = shouldShowSenderInfo(message, index);
+            
+            return (
               <div
-                className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
-                  message.user?.id === user?.id
-                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
-                    : 'bg-gray-100 text-gray-900'
-                }`}
+                key={message.id}
+                className={`flex items-end gap-2 ${ownMessage ? 'justify-end' : 'justify-start'}`}
               >
-                {message.user?.id !== user?.id && (
-                  <div className="text-xs font-semibold mb-1">{message.user?.name}</div>
+                {/* Avatar for other users */}
+                {!ownMessage && (
+                  <div className="flex-shrink-0">
+                    {showSenderInfo ? (
+                      <Avatar user={sender} size="sm" />
+                    ) : (
+                      <div className="w-8 h-8" /> // Placeholder for alignment
+                    )}
+                  </div>
                 )}
-                <p className="break-words">{message.content}</p>
-                <div className={`text-xs mt-1 ${
-                  message.user?.id === user?.id ? 'text-white/70' : 'text-gray-500'
-                }`}>
-                  {getRelativeTime(message.createdAt)}
+                
+                <div className={`max-w-xs lg:max-w-md ${ownMessage ? 'text-right' : 'text-left'}`}>
+                  {/* Sender name */}
+                  {showSenderInfo && (
+                    <div 
+                      className="text-xs font-semibold mb-1 ml-1"
+                      style={{ color: colors.textSecondary }}
+                    >
+                      {sender.displayName || sender.username || sender.name || 'Unknown'}
+                    </div>
+                  )}
+                  
+                  {/* Message bubble */}
+                  <div
+                    className="inline-block px-4 py-2 rounded-2xl"
+                    style={{
+                      backgroundColor: ownMessage ? colors.primary : colors.messageReceived,
+                      color: ownMessage ? colors.textInverse : colors.text,
+                      borderBottomRightRadius: ownMessage ? '4px' : undefined,
+                      borderBottomLeftRadius: !ownMessage ? '4px' : undefined,
+                    }}
+                  >
+                    <p className="break-words text-left">{message.content}</p>
+                    <div 
+                      className="text-xs mt-1"
+                      style={{ 
+                        color: ownMessage ? 'rgba(255,255,255,0.7)' : colors.textTertiary 
+                      }}
+                    >
+                      {getRelativeTime(message.createdAt)}
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
-      <div className="border-t border-gray-200 p-4">
+      <div 
+        className="p-4"
+        style={{ borderTop: `1px solid ${colors.border}` }}
+      >
         <form onSubmit={handleSendMessage} className="flex space-x-2">
           <input
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Type a message..."
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="flex-1 px-4 py-2 rounded-lg focus:outline-none focus:ring-2"
+            style={{
+              border: `1px solid ${colors.border}`,
+              backgroundColor: colors.surface,
+              color: colors.text,
+            }}
           />
           <Button type="submit" disabled={!newMessage.trim()}>
             <Send className="w-5 h-5" />

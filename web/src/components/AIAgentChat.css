@@ -201,6 +201,78 @@
   white-space: pre-wrap;
 }
 
+/* Formatted Message Styles */
+.formatted-message {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.message-paragraph {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.formatted-list {
+  margin: 0.5rem 0;
+  padding-left: 1.25rem;
+}
+
+.formatted-list .list-item {
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
+}
+
+/* Places List Styles */
+.places-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0.5rem 0;
+}
+
+.place-item {
+  background: linear-gradient(135deg, #fff9f5 0%, #fff 100%);
+  border: 1px solid #ffe4d4;
+  border-radius: 12px;
+  padding: 12px 14px;
+  transition: all 0.2s ease;
+}
+
+.place-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.15);
+  border-color: #FF6B35;
+}
+
+.place-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.place-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #1f2937;
+}
+
+.place-rating {
+  background: #fef3c7;
+  color: #92400e;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.place-address {
+  font-size: 0.85rem;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
 .loading-message {
   display: flex;
   align-items: center;

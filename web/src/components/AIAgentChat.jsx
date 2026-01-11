@@ -1,7 +1,118 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import GoogleMapRoute from './GoogleMapRoute';
+import useAuthStore from '../stores/authStore';
 import './AIAgentChat.css';
+
+// Parse and render formatted AI message
+const FormattedMessage = ({ text }) => {
+  const parseMessage = (content) => {
+    // Split by newlines to process line by line
+    const lines = content.split('\n');
+    const elements = [];
+    let inList = false;
+    let listItems = [];
+
+    const processInlineFormatting = (text, key) => {
+      // Handle bold text with **text**
+      const parts = text.split(/(\*\*[^*]+\*\*)/g);
+      return parts.map((part, idx) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          return <strong key={`${key}-${idx}`}>{part.slice(2, -2)}</strong>;
+        }
+        return part;
+      });
+    };
+
+    lines.forEach((line, index) => {
+      const trimmedLine = line.trim();
+      
+      // Check for numbered list items (1. 2. etc.)
+      const numberedMatch = trimmedLine.match(/^(\d+)\.\s+(.+)$/);
+      // Check for bullet points
+      const bulletMatch = trimmedLine.match(/^[-•]\s+(.+)$/);
+      
+      if (numberedMatch || bulletMatch) {
+        if (!inList) {
+          inList = true;
+          listItems = [];
+        }
+        const content = numberedMatch ? numberedMatch[2] : bulletMatch[1];
+        
+        // Parse cafe/place format: **Name** (Rating: X.X) - Address
+        const placeMatch = content.match(/^\*\*([^*]+)\*\*\s*\(Rating:\s*([\d.]+)\)\s*-\s*(.+)$/);
+        
+        if (placeMatch) {
+          listItems.push(
+            <div key={index} className="place-item">
+              <div className="place-header">
+                <span className="place-name">{placeMatch[1]}</span>
+                <span className="place-rating">⭐ {placeMatch[2]}</span>
+              </div>
+              <div className="place-address">📍 {placeMatch[3]}</div>
+            </div>
+          );
+        } else {
+          listItems.push(
+            <li key={index} className="list-item">
+              {processInlineFormatting(content, index)}
+            </li>
+          );
+        }
+      } else {
+        // End of list
+        if (inList && listItems.length > 0) {
+          const hasPlaceItems = listItems.some(item => item.props.className === 'place-item');
+          if (hasPlaceItems) {
+            elements.push(
+              <div key={`places-${index}`} className="places-list">
+                {listItems}
+              </div>
+            );
+          } else {
+            elements.push(
+              <ol key={`list-${index}`} className="formatted-list">
+                {listItems}
+              </ol>
+            );
+          }
+          listItems = [];
+          inList = false;
+        }
+        
+        if (trimmedLine) {
+          elements.push(
+            <p key={index} className="message-paragraph">
+              {processInlineFormatting(trimmedLine, index)}
+            </p>
+          );
+        }
+      }
+    });
+
+    // Handle remaining list items
+    if (inList && listItems.length > 0) {
+      const hasPlaceItems = listItems.some(item => item.props.className === 'place-item');
+      if (hasPlaceItems) {
+        elements.push(
+          <div key="places-final" className="places-list">
+            {listItems}
+          </div>
+        );
+      } else {
+        elements.push(
+          <ol key="list-final" className="formatted-list">
+            {listItems}
+          </ol>
+        );
+      }
+    }
+
+    return elements;
+  };
+
+  return <div className="formatted-message">{parseMessage(text)}</div>;
+};
 
 const AIAgentChat = ({ onClose }) => {
   const [messages, setMessages] = useState([]);
@@ -10,6 +121,7 @@ const AIAgentChat = ({ onClose }) => {
   const [routeData, setRouteData] = useState(null);
   const messagesEndRef = useRef(null);
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+  const { token } = useAuthStore();
 
   useEffect(() => {
     loadHistory();
@@ -25,9 +137,8 @@ const AIAgentChat = ({ onClose }) => {
 
   const loadHistory = async () => {
     try {
-      // const token = localStorage.getItem('token');
       const response = await axios.get(`${API_URL}/ai-agent/history`, {
-        // headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
       
       const history = response.data.data;
@@ -53,11 +164,10 @@ const AIAgentChat = ({ onClose }) => {
     setLoading(true);
 
     try {
-      // const token = localStorage.getItem('token');
       const response = await axios.post(
         `${API_URL}/ai-agent/chat`,
         { message: userMessage },
-        // { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       const aiResponse = response.data.data.message;
@@ -96,9 +206,8 @@ const AIAgentChat = ({ onClose }) => {
 
   const resetConversation = async () => {
     try {
-      // const token = localStorage.getItem('token');
       await axios.post(`${API_URL}/ai-agent/reset`, {}, {
-        // headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
       setMessages([]);
       setRouteData(null);
@@ -167,7 +276,11 @@ const AIAgentChat = ({ onClose }) => {
               {message.role === 'user' ? '👤' : '✨'}
             </div>
             <div className="message-bubble">
-              <p>{message.text}</p>
+              {message.role === 'user' ? (
+                <p>{message.text}</p>
+              ) : (
+                <FormattedMessage text={message.text} />
+              )}
             </div>
           </div>
         ))}

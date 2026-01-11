@@ -9,6 +9,7 @@ const Button = ({
   onClick,
   type = 'button',
   className = '',
+  as: Component = 'button',
   ...props 
 }) => {
   const baseStyles = 'font-semibold rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2';
@@ -50,17 +51,19 @@ const Button = ({
   const widthClass = fullWidth ? 'w-full' : '';
   const variantStyle = variantStyles[variant];
   
+  // For non-button elements, don't pass button-specific props
+  const elementProps = Component === 'button' 
+    ? { type, disabled, onClick, ...props }
+    : { onClick: disabled ? undefined : onClick, ...props };
+  
   return (
-    <button
-      type={type}
-      disabled={disabled}
-      onClick={onClick}
-      className={`${baseStyles} ${sizes[size]} ${widthClass} ${className}`}
+    <Component
+      className={`${baseStyles} ${sizes[size]} ${widthClass} ${className} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
       style={variantStyle}
-      {...props}
+      {...elementProps}
     >
       {children}
-    </button>
+    </Component>
   );
 };
 

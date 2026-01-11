@@ -119,13 +119,22 @@ export default function ChatScreen() {
 
   const renderMessage = ({ item, index }: { item: Message; index: number }) => {
     const isOwnMessage = item.senderId === user?.id;
+    // Since FlatList is inverted, the next message in visual order is at index - 1
+    const reversedMessages = [...messages].reverse();
+    const nextMessage = reversedMessages[index + 1];
+    const prevMessage = reversedMessages[index - 1];
+    
+    // Show avatar if it's the last message from this sender in a group
     const showAvatar = !isOwnMessage && 
-      (index === messages.length - 1 || 
-       messages[index + 1]?.senderId !== item.senderId);
+      (!nextMessage || nextMessage.senderId !== item.senderId);
+    
+    // Show sender name if it's the first message from this sender in a group  
+    const showSenderName = !isOwnMessage &&
+      (!prevMessage || prevMessage.senderId !== item.senderId);
     
     // Check if we need to show date separator
-    const showDate = index === 0 || 
-      formatMessageDate(item.createdAt) !== formatMessageDate(messages[index - 1].createdAt);
+    const showDate = !prevMessage || 
+      formatMessageDate(item.createdAt) !== formatMessageDate(prevMessage.createdAt);
 
     return (
       <View>
@@ -156,7 +165,7 @@ export default function ChatScreen() {
               item.isDeleted && styles.deletedBubble,
             ]}
           >
-            {!isOwnMessage && showAvatar && (
+            {showSenderName && item.sender && (
               <Text style={styles.senderName}>
                 {item.sender.displayName || item.sender.username}
               </Text>

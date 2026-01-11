@@ -56,7 +56,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // Rejoin current plan if any
       const planId = get().currentPlanId;
       if (planId) {
-        socket.emit('join-plan', planId);
+        socket.emit('join_plan', planId);
       }
     });
 
@@ -64,7 +64,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       set({ isConnected: false });
     });
 
-    socket.on('new-message', (message: Message) => {
+    socket.on('new_message', (message: Message) => {
       const currentPlanId = get().currentPlanId;
       if (message.planId === currentPlanId) {
         set((state) => ({
@@ -73,7 +73,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
     });
 
-    socket.on('message-deleted', ({ messageId, planId }: { messageId: string; planId: string }) => {
+    socket.on('message_deleted', ({ messageId, planId }: { messageId: string; planId: string }) => {
       if (planId === get().currentPlanId) {
         set((state) => ({
           messages: state.messages.map((m) =>
@@ -83,11 +83,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
     });
 
-    socket.on('user-typing', ({ userId, username, planId }: { userId: string; username: string; planId: string }) => {
+    socket.on('user_typing', ({ user, planId }: { user: { id: string; username: string }; planId: string }) => {
       if (planId === get().currentPlanId) {
         set((state) => {
           const newTypingUsers = new Map(state.typingUsers);
-          newTypingUsers.set(userId, { username, planId });
+          newTypingUsers.set(user.id, { username: user.username, planId });
           return { typingUsers: newTypingUsers };
         });
 
@@ -95,18 +95,18 @@ export const useChatStore = create<ChatState>((set, get) => ({
         setTimeout(() => {
           set((state) => {
             const newTypingUsers = new Map(state.typingUsers);
-            newTypingUsers.delete(userId);
+            newTypingUsers.delete(user.id);
             return { typingUsers: newTypingUsers };
           });
         }, 3000);
       }
     });
 
-    socket.on('user-stop-typing', ({ userId, planId }: { userId: string; planId: string }) => {
+    socket.on('user_stopped_typing', ({ user, planId }: { user: { id: string }; planId: string }) => {
       if (planId === get().currentPlanId) {
         set((state) => {
           const newTypingUsers = new Map(state.typingUsers);
-          newTypingUsers.delete(userId);
+          newTypingUsers.delete(user.id);
           return { typingUsers: newTypingUsers };
         });
       }
@@ -129,9 +129,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // Leave previous plan
       const prevPlanId = get().currentPlanId;
       if (prevPlanId && prevPlanId !== planId) {
-        socket.emit('leave-plan', prevPlanId);
+        socket.emit('leave_plan', prevPlanId);
       }
-      socket.emit('join-plan', planId);
+      socket.emit('join_plan', planId);
       set({ currentPlanId: planId, messages: [], hasMore: true });
     }
   },
@@ -139,7 +139,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   leavePlan: (planId: string) => {
     const { socket } = get();
     if (socket) {
-      socket.emit('leave-plan', planId);
+      socket.emit('leave_plan', planId);
       set({ currentPlanId: null, messages: [], typingUsers: new Map() });
     }
   },
@@ -171,7 +171,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     try {
       // Emit via socket for real-time delivery
-      socket.emit('send-message', { planId, content, type, metadata });
+      socket.emit('send_message', { planId, content, type, metadata });
     } catch (error: any) {
       set({ error: error.response?.data?.message || 'Failed to send message' });
       throw error;
@@ -183,7 +183,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (!socket) return;
 
     try {
-      socket.emit('delete-message', { planId, messageId });
+      socket.emit('delete_message', { planId, messageId });
     } catch (error: any) {
       set({ error: error.response?.data?.message || 'Failed to delete message' });
       throw error;
@@ -193,14 +193,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
   startTyping: (planId: string) => {
     const { socket } = get();
     if (socket) {
-      socket.emit('typing-start', planId);
+      socket.emit('typing_start', planId);
     }
   },
 
   stopTyping: (planId: string) => {
     const { socket } = get();
     if (socket) {
-      socket.emit('typing-stop', planId);
+      socket.emit('typing_stop', planId);
     }
   },
 

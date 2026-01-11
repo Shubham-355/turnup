@@ -1,203 +1,432 @@
-import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
-import { MapPin, Navigation } from 'lucide-react';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
+import { useEffect, useState, useRef } from 'react';
+import { MapPin, Navigation, RefreshCw, Maximize2 } from 'lucide-react';
+import { colors } from '../../theme';
 
-// Fix default marker icon issue with Webpack
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
-
-// Create numbered icon
-const createNumberedIcon = (number) => {
-  return L.divIcon({
-    className: 'custom-numbered-icon',
-    html: `<div style="background-color: #9333ea; color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">${number}</div>`,
-    iconSize: [30, 30],
-    iconAnchor: [15, 15],
-    popupAnchor: [0, -15],
-  });
-};
-
-// Component to fit map bounds to markers
-const FitBounds = ({ positions }) => {
-  const map = useMap();
-  
-  useEffect(() => {
-    if (positions.length > 0) {
-      const bounds = L.latLngBounds(positions);
-      map.fitBounds(bounds, { padding: [50, 50] });
-    }
-  }, [positions, map]);
-  
-  return null;
-};
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
 const MapView = ({ activities }) => {
-  const [routeCoordinates, setRouteCoordinates] = useState([]);
-  const [isLoadingRoute, setIsLoadingRoute] = useState(false);
+  const mapContainerRef = useRef(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [userLocation, setUserLocation] = useState(null);
 
   // Filter activities with valid coordinates
-  const activitiesWithLocation = activities.filter(
+  const activitiesWithLocation = activities?.filter(
     activity => activity.latitude && activity.longitude
-  );
+  ) || [];
 
-  // Get route from backend
+  // Get user location
   useEffect(() => {
-    const fetchRoute = async () => {
-      if (activitiesWithLocation.length < 2) {
-        setRouteCoordinates([]);
-        return;
-      }
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (err) => {
+          console.log('Geolocation error:', err);
+        }
+      );
+    }
+  }, []);
 
+  // Generate the map HTML
+  const getMapHTML = () => {
+    const activityMarkers = activitiesWithLocation.map((a, index) => ({
+      lat: a.latitude,
+      lng: a.longitude,
+      name: a.locationName || a.name || `Stop ${index + 1}`,
+      address: a.locationAddress || '',
+      order: index + 1,
+    }));
+
+    // Calculate center
+    const centerLat = activityMarkers[0]?.lat || userLocation?.lat || 37.7749;
+    const centerLng = activityMarkers[0]?.lng || userLocation?.lng || -122.4194;
+
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body, #map { width: 100%; height: 100%; }
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #6B7280;
+      background: #F9FAFB;
+    }
+    .error {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #EF4444;
+      background: #FEE2E2;
+      padding: 20px;
+      text-align: center;
+    }
+    .legend {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background: white;
+      padding: 12px 16px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 12px;
+      z-index: 1000;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .legend-item:last-child { margin-bottom: 0; }
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid white;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    }
+    .info-window {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 8px;
+      min-width: 150px;
+    }
+    .info-window h4 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 4px;
+    }
+    .info-window p {
+      font-size: 12px;
+      color: #6B7280;
+      margin: 0;
+    }
+    .info-window .order {
+      display: inline-block;
+      background: ${colors.success};
+      color: white;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 20px;
+      font-size: 11px;
+      font-weight: bold;
+      margin-right: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"><div class="loading">Loading Google Maps...</div></div>
+  
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-dot" style="background: #4285F4;"></div>
+      <span>Your Location</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background: ${colors.success};"></div>
+      <span>Venues</span>
+    </div>
+    <div class="legend-item">
+      <div style="width: 20px; height: 4px; background: #7C3AED; border-radius: 2px;"></div>
+      <span>Route</span>
+    </div>
+  </div>
+
+  <script>
+    let map;
+    let directionsService;
+    let directionsRenderer;
+    
+    function initMap() {
       try {
-        setIsLoadingRoute(true);
-        const planId = activitiesWithLocation[0]?.planId;
-        
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/plans/${planId}/route`, {
-          headers: {
-            'Authorization': `Bearer ${JSON.parse(localStorage.getItem('auth-storage'))?.state?.token}`,
-          },
+        map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 13,
+          center: { lat: ${centerLat}, lng: ${centerLng} },
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: true,
+          zoomControl: true,
+          styles: [
+            { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
+            { featureType: 'poi.park', elementType: 'labels', stylers: [{ visibility: 'off' }] }
+          ]
         });
 
-        if (!response.ok) throw new Error('Failed to fetch route');
+        directionsService = new google.maps.DirectionsService();
+        directionsRenderer = new google.maps.DirectionsRenderer({
+          map: map,
+          suppressMarkers: true,
+          polylineOptions: {
+            strokeColor: '#7C3AED',
+            strokeOpacity: 0.8,
+            strokeWeight: 5,
+          }
+        });
 
-        const data = await response.json();
+        const bounds = new google.maps.LatLngBounds();
+
+        // User location marker (blue dot)
+        ${userLocation ? `
+        const userMarker = new google.maps.Marker({
+          position: { lat: ${userLocation.lat}, lng: ${userLocation.lng} },
+          map: map,
+          title: 'Your Location',
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 12,
+            fillColor: '#4285F4',
+            fillOpacity: 1,
+            strokeColor: '#FFFFFF',
+            strokeWeight: 3,
+          },
+          zIndex: 1000
+        });
+        bounds.extend({ lat: ${userLocation.lat}, lng: ${userLocation.lng} });
+        ` : ''}
+
+        // Activity/Venue markers
+        const activityLocations = ${JSON.stringify(activityMarkers)};
         
-        // Backend returns route with polyline or coordinates
-        if (data.data?.route?.coordinates) {
-          // Use coordinates from backend route
-          setRouteCoordinates(data.data.route.coordinates.map(coord => [coord.lat, coord.lng]));
-        } else if (data.data?.activities) {
-          // Fallback: use activity coordinates in order
-          setRouteCoordinates(
-            data.data.activities
-              .filter(a => a.latitude && a.longitude)
-              .map(a => [a.latitude, a.longitude])
-          );
-        } else {
-          // Final fallback: draw straight lines between points
-          setRouteCoordinates(
-            activitiesWithLocation.map(a => [a.latitude, a.longitude])
-          );
+        activityLocations.forEach((activity, index) => {
+          const marker = new google.maps.Marker({
+            position: { lat: activity.lat, lng: activity.lng },
+            map: map,
+            title: activity.name,
+            label: {
+              text: String(index + 1),
+              color: '#FFFFFF',
+              fontWeight: 'bold',
+              fontSize: '14px'
+            },
+            icon: {
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: 18,
+              fillColor: '${colors.success}',
+              fillOpacity: 1,
+              strokeColor: '#FFFFFF',
+              strokeWeight: 3,
+            },
+            zIndex: 500
+          });
+          
+          const infoWindow = new google.maps.InfoWindow({
+            content: \`
+              <div class="info-window">
+                <h4><span class="order">\${index + 1}</span>\${activity.name}</h4>
+                \${activity.address ? '<p>' + activity.address + '</p>' : ''}
+              </div>
+            \`
+          });
+          
+          marker.addListener('click', () => infoWindow.open(map, marker));
+          bounds.extend({ lat: activity.lat, lng: activity.lng });
+        });
+
+        // Fit bounds if we have markers
+        if (activityLocations.length > 0 || ${userLocation ? 'true' : 'false'}) {
+          map.fitBounds(bounds, { padding: 60 });
+          
+          // Don't zoom in too much for single marker
+          google.maps.event.addListenerOnce(map, 'bounds_changed', function() {
+            if (map.getZoom() > 16) map.setZoom(16);
+          });
         }
+
+        // Draw route between activities
+        if (activityLocations.length >= 2) {
+          const waypoints = activityLocations.slice(1, -1).map(loc => ({
+            location: new google.maps.LatLng(loc.lat, loc.lng),
+            stopover: true
+          }));
+
+          directionsService.route({
+            origin: new google.maps.LatLng(activityLocations[0].lat, activityLocations[0].lng),
+            destination: new google.maps.LatLng(
+              activityLocations[activityLocations.length - 1].lat,
+              activityLocations[activityLocations.length - 1].lng
+            ),
+            waypoints: waypoints,
+            travelMode: google.maps.TravelMode.DRIVING,
+            optimizeWaypoints: false,
+          }, (result, status) => {
+            if (status === 'OK') {
+              directionsRenderer.setDirections(result);
+            } else {
+              console.log('Directions request failed:', status);
+            }
+          });
+        }
+        
+        // Notify parent that map loaded
+        window.parent.postMessage({ type: 'mapLoaded' }, '*');
+        
       } catch (error) {
-        console.error('Error fetching route:', error);
-        // Fallback: draw straight lines between points
-        setRouteCoordinates(
-          activitiesWithLocation.map(a => [a.latitude, a.longitude])
-        );
-      } finally {
-        setIsLoadingRoute(false);
+        document.getElementById('map').innerHTML = '<div class="error"><strong>Map Error</strong><p>' + error.message + '</p></div>';
+      }
+    }
+    
+    // Error handler
+    function handleMapError() {
+      document.getElementById('map').innerHTML = '<div class="error"><strong>Failed to load Google Maps</strong><p>Please check your API key and internet connection.</p></div>';
+    }
+  </script>
+  <script 
+    src="https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&callback=initMap" 
+    async 
+    defer
+    onerror="handleMapError()"
+  ></script>
+</body>
+</html>
+    `;
+  };
+
+  useEffect(() => {
+    if (mapContainerRef.current && (activitiesWithLocation.length > 0 || userLocation)) {
+      const iframe = mapContainerRef.current.querySelector('iframe');
+      if (iframe) {
+        iframe.srcdoc = getMapHTML();
+      }
+    }
+  }, [activitiesWithLocation.length, userLocation]);
+
+  // Listen for map loaded message
+  useEffect(() => {
+    const handleMessage = (event) => {
+      if (event.data?.type === 'mapLoaded') {
+        setIsLoading(false);
       }
     };
-
-    fetchRoute();
-  }, [activitiesWithLocation.length]);
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
 
   if (activitiesWithLocation.length === 0) {
     return (
-      <div className="bg-white rounded-xl p-12 text-center">
-        <MapPin className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-        <h3 className="text-xl font-semibold text-gray-900 mb-2">No locations added</h3>
-        <p className="text-gray-600">
+      <div 
+        className="rounded-xl p-12 text-center"
+        style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}` }}
+      >
+        <div 
+          className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4"
+          style={{ backgroundColor: colors.surfaceLight }}
+        >
+          <MapPin className="w-10 h-10" style={{ color: colors.textTertiary }} />
+        </div>
+        <h3 
+          className="text-xl font-semibold mb-2"
+          style={{ color: colors.text }}
+        >
+          No locations added
+        </h3>
+        <p style={{ color: colors.textSecondary }}>
           Add activities with locations to see them on the map and view your route.
         </p>
       </div>
     );
   }
 
-  const defaultCenter = [activitiesWithLocation[0].latitude, activitiesWithLocation[0].longitude];
-  const positions = activitiesWithLocation.map(a => [a.latitude, a.longitude]);
+  if (!GOOGLE_MAPS_API_KEY) {
+    return (
+      <div 
+        className="rounded-xl p-12 text-center"
+        style={{ backgroundColor: colors.errorLight, border: `1px solid ${colors.error}` }}
+      >
+        <MapPin className="w-16 h-16 mx-auto mb-4" style={{ color: colors.error }} />
+        <h3 
+          className="text-xl font-semibold mb-2"
+          style={{ color: colors.error }}
+        >
+          Google Maps API Key Missing
+        </h3>
+        <p style={{ color: colors.error }}>
+          Please add VITE_GOOGLE_MAPS_API_KEY to your environment variables.
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-white rounded-xl overflow-hidden shadow-lg">
-      <div className="h-[500px] relative">
-        <MapContainer
-          center={defaultCenter}
-          zoom={13}
-          className="h-full w-full"
-          scrollWheelZoom={true}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          
-          {/* Fit bounds to show all markers */}
-          <FitBounds positions={positions} />
-          
-          {/* Draw route line */}
-          {routeCoordinates.length > 0 && (
-            <Polyline
-              positions={routeCoordinates}
-              color="#9333ea"
-              weight={4}
-              opacity={0.8}
-            />
-          )}
-          
-          {/* Activity markers with numbers */}
-          {activitiesWithLocation.map((activity, index) => (
-            <Marker
-              key={activity.id}
-              position={[activity.latitude, activity.longitude]}
-              icon={createNumberedIcon(index + 1)}
-            >
-              <Popup>
-                <div className="p-2">
-                  <div className="font-semibold text-purple-600 mb-1">
-                    {index + 1}. {activity.name}
-                  </div>
-                  {activity.locationName && (
-                    <div className="text-sm text-gray-600 mb-1">
-                      <MapPin className="w-3 h-3 inline mr-1" />
-                      {activity.locationName}
-                    </div>
-                  )}
-                  {activity.locationAddress && (
-                    <div className="text-xs text-gray-500">
-                      {activity.locationAddress}
-                    </div>
-                  )}
-                  {(activity.date || activity.time) && (
-                    <div className="text-xs text-gray-500 mt-1">
-                      {activity.date && new Date(activity.date).toLocaleDateString()}
-                      {activity.date && activity.time && ' at '}
-                      {activity.time}
-                    </div>
-                  )}
-                </div>
-              </Popup>
-            </Marker>
-          ))}
-        </MapContainer>
+    <div 
+      className="rounded-xl overflow-hidden shadow-lg"
+      style={{ backgroundColor: colors.background }}
+    >
+      {/* Map Container */}
+      <div 
+        ref={mapContainerRef} 
+        className="relative"
+        style={{ height: '500px' }}
+      >
+        <iframe
+          srcDoc={getMapHTML()}
+          className="w-full h-full border-0"
+          title="Google Maps"
+          allow="geolocation"
+        />
         
-        {isLoadingRoute && (
-          <div className="absolute top-4 right-4 bg-white px-3 py-2 rounded-lg shadow-md text-sm text-gray-600 z-[1000]">
-            <Navigation className="w-4 h-4 inline mr-2 animate-spin" />
-            Loading route...
+        {isLoading && (
+          <div 
+            className="absolute inset-0 flex items-center justify-center"
+            style={{ backgroundColor: colors.surface }}
+          >
+            <div className="text-center">
+              <RefreshCw 
+                className="w-8 h-8 animate-spin mx-auto mb-2" 
+                style={{ color: colors.primary }}
+              />
+              <p style={{ color: colors.textSecondary }}>Loading map...</p>
+            </div>
           </div>
         )}
       </div>
       
       {/* Route Summary */}
-      <div className="p-4 bg-gray-50 border-t border-gray-200">
+      <div 
+        className="p-4"
+        style={{ 
+          backgroundColor: colors.surface,
+          borderTop: `1px solid ${colors.border}` 
+        }}
+      >
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-sm font-medium text-gray-900">
+            <div 
+              className="text-sm font-medium"
+              style={{ color: colors.text }}
+            >
               {activitiesWithLocation.length} {activitiesWithLocation.length === 1 ? 'Location' : 'Locations'}
             </div>
-            <div className="text-xs text-gray-500">
+            <div 
+              className="text-xs"
+              style={{ color: colors.textSecondary }}
+            >
               Click markers to see activity details
             </div>
           </div>
-          {routeCoordinates.length > 1 && (
-            <div className="text-sm text-purple-600 font-medium">
+          {activitiesWithLocation.length > 1 && (
+            <div 
+              className="flex items-center gap-2 text-sm font-medium"
+              style={{ color: colors.primary }}
+            >
+              <Navigation className="w-4 h-4" />
               Route mapped
             </div>
           )}

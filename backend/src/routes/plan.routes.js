@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const planController = require('../controllers/plan.controller');
+const activityController = require('../controllers/activity.controller');
 const { authenticate, isPlanMember, isPlanAdmin } = require('../middlewares/auth.middleware');
 const validate = require('../middlewares/validate.middleware');
 const {
@@ -11,6 +12,12 @@ const {
   joinByInviteCodeValidation,
   updateMemberRoleValidation,
 } = require('../validators/plan.validator');
+const {
+  createActivityValidation,
+  updateActivityValidation,
+  getActivityValidation,
+  reorderActivitiesValidation,
+} = require('../validators/activity.validator');
 
 // All routes require authentication
 router.use(authenticate);
@@ -42,5 +49,13 @@ router.delete(
 );
 router.post('/:planId/leave', getPlanValidation, validate, isPlanMember, planController.leavePlan);
 router.post('/:planId/regenerate-invite', getPlanValidation, validate, planController.regenerateInviteCode);
+
+// Nested activity routes under plans
+router.get('/:planId/activities', getPlanValidation, validate, isPlanMember, activityController.getPlanActivities);
+router.post('/:planId/activities', createActivityValidation, validate, activityController.createActivity);
+router.put('/:planId/activities/reorder', reorderActivitiesValidation, validate, activityController.reorderActivities);
+router.get('/:planId/activities/:activityId', getActivityValidation, validate, activityController.getActivityById);
+router.put('/:planId/activities/:activityId', updateActivityValidation, validate, activityController.updateActivity);
+router.delete('/:planId/activities/:activityId', getActivityValidation, validate, activityController.deleteActivity);
 
 module.exports = router;
