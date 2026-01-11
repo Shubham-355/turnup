@@ -14,11 +14,11 @@ const Signup = () => {
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
   const [formData, setFormData] = useState({
-    name: '',
+    username: '',
     email: '',
     password: '',
     confirmPassword: '',
-    phone: '',
+    displayName: '',
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -34,8 +34,12 @@ const Signup = () => {
   const validate = () => {
     const newErrors = {};
     
-    if (!validateRequired(formData.name)) {
-      newErrors.name = 'Name is required';
+    if (!validateRequired(formData.username)) {
+      newErrors.username = 'Username is required';
+    } else if (formData.username.length < 3) {
+      newErrors.username = 'Username must be at least 3 characters';
+    } else if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
+      newErrors.username = 'Username can only contain letters, numbers, and underscores';
     }
     
     if (!validateEmail(formData.email)) {
@@ -98,15 +102,25 @@ const Signup = () => {
         <div className="space-y-6 mb-8">
           <form onSubmit={handleSubmit} className="space-y-5">
             <Input
-              label="Full Name"
+              label="Username"
               type="text"
-              name="name"
-              value={formData.name}
+              name="username"
+              value={formData.username}
               onChange={handleChange}
-              placeholder="Enter your name"
+              placeholder="Choose a username"
               icon={User}
-              error={errors.name}
+              error={errors.username}
               required
+            />
+
+            <Input
+              label="Display Name (Optional)"
+              type="text"
+              name="displayName"
+              value={formData.displayName}
+              onChange={handleChange}
+              placeholder="Your display name"
+              icon={User}
             />
 
             <Input
@@ -119,16 +133,6 @@ const Signup = () => {
               icon={Mail}
               error={errors.email}
               required
-            />
-
-            <Input
-              label="Phone (Optional)"
-              type="tel"
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              placeholder="Enter your phone"
-              icon={Phone}
             />
 
             <Input
