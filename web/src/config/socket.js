@@ -10,14 +10,6 @@ export const initSocket = (token) => {
       auth: { token },
       transports: ['websocket', 'polling'],
     });
-
-    socket.on('connect', () => {
-      console.log('Socket connected:', socket.id);
-    });
-
-    socket.on('disconnect', () => {
-      console.log('Socket disconnected');
-    });
   }
   return socket;
 };
