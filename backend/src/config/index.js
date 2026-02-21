@@ -10,7 +10,7 @@ module.exports = {
   
   // JWT
   jwt: {
-    secret: process.env.JWT_SECRET || 'fallback-secret-change-me',
+    secret: process.env.JWT_SECRET,
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   },
   
